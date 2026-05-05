@@ -911,7 +911,7 @@ export default {
         'APIs': '/images/apis-removebg-preview.png',
         'APIs REST': '/images/apis-removebg-preview.png'
       }
-      return iconMap[tech] || '/images/Coding-404-logo.webp'
+      return iconMap[tech] || '/images/Coding-404-logo.png'
     },
     async persistLearningPath(nextPath) {
       this.$emit('user-updated', {
@@ -1645,17 +1645,6 @@ export default {
   background: linear-gradient(135deg, rgba(157, 243, 182, 0.5) 0%, rgba(93, 243, 148, 0.3) 100%);
   border-color: rgba(157, 243, 182, 0.6);
   transform: translateY(-2px);
-}
-
-.action-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.action-btn.completed {
-  background: linear-gradient(135deg, rgba(93, 243, 148, 0.4) 0%, rgba(93, 243, 148, 0.2) 100%);
-  border-color: rgba(93, 243, 148, 0.6);
-  color: #5df394;
 }
 
 .action-btn:disabled {

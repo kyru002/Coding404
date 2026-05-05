@@ -2,7 +2,7 @@
   <div class="login-container">
     <!-- Logo -->
     <div class="logo-container">
-      <img src="/images/Coding-404-logo.webp" alt="Coding 404" class="logo-image" />
+      <img src="/images/Coding-404-logo.png" alt="Coding 404" class="logo-image" />
     </div>
 
     <div class="login-card">

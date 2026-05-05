@@ -10,9 +10,9 @@ const loadLogo = () => {
   if (logoBase64) return logoBase64;
   
   try {
-    const logoPath = path.join(__dirname, '../../../Frontend/public/images/Coding-404-logo.webp');
+    const logoPath = path.join(__dirname, '../../../Frontend/public/images/Coding-404-logo.png');
     const logoBuffer = fs.readFileSync(logoPath);
-    logoBase64 = 'data:image/webp;base64,' + logoBuffer.toString('base64');
+    logoBase64 = 'data:image/png;base64,' + logoBuffer.toString('base64');
     return logoBase64;
   } catch (error) {
     console.warn('⚠️ Could not load logo image:', error.message);
@@ -49,7 +49,7 @@ const sendWelcomeEmail = async (user) => {
 
     // Cargar el logo en Base64
     const logo = loadLogo();
-    const logoSrc = logo || 'https://raw.githubusercontent.com/tu-usuario/coding404/main/Frontend/public/images/Coding-404-logo.webp';
+    const logoSrc = logo || 'https://raw.githubusercontent.com/tu-usuario/coding404/main/Frontend/public/images/Coding-404-logo.png';
 
     const transporter = initTransporter();
 

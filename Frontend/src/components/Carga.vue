@@ -1,8 +1,8 @@
 <template>
   <div class="home-blank">
     <div class="logo-reveal" aria-label="Coding 404">
-      <img src="/images/Coding-404-logo.webp" alt="" class="logo-base" />
-      <img src="/images/Coding-404-logo.webp" alt="Coding 404" class="logo-fill" />
+      <img src="/images/Coding-404-logo.png" alt="" class="logo-base" />
+      <img src="/images/Coding-404-logo.png" alt="Coding 404" class="logo-fill" />
     </div>
   </div>
 </template>
