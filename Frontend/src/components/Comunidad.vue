@@ -700,7 +700,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
       </button>
       <button class="nav-item" :class="{ active: activeSection === 'comunidad' }" @click="$emit('change-section', 'comunidad')" :title="t('navCommunity')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
         <span v-if="notificationsUnreadCount > 0" class="menu-alert-badge">{{ notificationsUnreadCount > 9 ? '9+' : notificationsUnreadCount }}</span>
       </button>
       <button class="nav-item" :class="{ active: activeSection === 'clasificacion' }" @click="$emit('change-section', 'clasificacion')" :title="t('navRanking')">
@@ -722,6 +722,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
 
 <script>
 import { API_BASE_URL } from '../config/api'
+import { io } from 'socket.io-client';
 
 export default {
   name: 'Comunidad',
@@ -983,93 +984,93 @@ export default {
           back: 'Volver',
           challengeResult: 'Resultado del Desafio',
           waiting: 'En espera',
-          waitingFriend: 'Esperando a tu amigo',
-          progress: 'Progreso',
-          backChallenges: 'Volver a desafios',
+          waitingFriend: 'Waiting for your friend',
+          progress: 'Progress',
+          backChallenges: 'Back to challenges',
           victory: 'Victoria',
           defeat: 'Derrota',
-          shareVictory: 'Compartir victoria',
-          sharing: 'Compartiendo...',
-          processing: 'Procesando',
-          calculatingResult: 'Calculando resultado...',
-          statement: 'Enunciado',
-          run: 'Ejecutar',
-          finish: 'Terminar',
-          practice: 'Practica',
-          community: 'Comunidad',
+          shareVictory: 'Share victory',
+          sharing: 'Sharing...',
+          processing: 'Processing',
+          calculatingResult: 'Calculating result...',
+          statement: 'Statement',
+          run: 'Run',
+          finish: 'Finish',
+          practice: 'Practice',
+          community: 'Community',
           challengeTitle: 'Desafio de Codigo',
           challengeDesc: 'Elige tu lenguaje de programacion y presiona iniciar para probar tu poder',
-          chooseLanguage: 'Elegir lenguaje',
-          searchingOpponent: 'Buscando oponente...',
+          chooseLanguage: 'Choose language',
+          searchingOpponent: 'Searching opponent...',
           start: 'Iniciar',
-          byCommunity: 'Por la Comunidad',
-          upload: '+ Subir',
-          shareAndDownload: 'Comparte y descarga proyectos, algoritmos, git y estructuras',
-          by: 'por',
-          viewCode: 'Ver codigo',
-          delete: 'Eliminar',
-          adminMode: 'Modo administrador: puedes moderar publicaciones y banear usuarios.',
-          logout: 'Cerrar sesion',
-          all: 'Todos',
-          forYou: 'Para ti',
-          saved: 'Guardados',
-          myPosts: 'Mis posts',
-          notifications: 'Notificaciones',
-          noNotifications: 'No tienes notificaciones todavía.',
+          byCommunity: 'From the Community',
+          upload: '+ Upload',
+          shareAndDownload: 'Share and download projects, algorithms, git and data structures',
+          by: 'by',
+          viewCode: 'View code',
+          delete: 'Delete',
+          adminMode: 'Admin mode: you can moderate posts and ban users.',
+          logout: 'Log out',
+          all: 'All',
+          forYou: 'For You',
+          saved: 'Saved',
+          myPosts: 'My posts',
+          notifications: 'Notifications',
+          noNotifications: 'You have no notifications yet.',
           whatLearning: 'Que estas aprendiendo hoy?',
-          uploadProject: '+ Subir proyecto',
-          publish: 'Publicar',
-          noPosts: 'Aun no hay posts en la comunidad.',
-          beFirst: 'Se el primero en compartir tu progreso!',
-          viewLess: 'Ver menos',
-          viewMore: 'Ver mas...',
-          projects: 'Proyectos',
-          viewRepo: 'Ver repositorio',
-          viewProjects: 'Proyectos',
-          loadingProjects: 'Cargando proyectos...',
-          projectsFromUser: 'Publicaciones de',
-          noProjectsYet: 'Este usuario aun no tiene publicaciones.',
-          viewProjectRepo: 'Ver repositorio',
+          uploadProject: '+ Upload project',
+          publish: 'Publish',
+          noPosts: 'There are no community posts yet.',
+          beFirst: 'Be the first to share your progress!',
+          viewLess: 'Show less',
+          viewMore: 'Show more...',
+          projects: 'Projects',
+          viewRepo: 'View repository',
+          viewProjects: 'Projects',
+          loadingProjects: 'Loading projects...',
+          projectsFromUser: 'Posts from',
+          noProjectsYet: 'This user has no posts yet.',
+          viewProjectRepo: 'View repository',
           noUsersInList: 'No hay usuarios para mostrar.',
-          save: 'Guardar',
-          share: 'Compartir',
-          deletePost: 'Eliminar post',
-          banUser: 'Banear usuario',
-          noComments: 'Aun no hay comentarios.',
-          writeComment: 'Escribe un comentario...',
-          send: 'Enviar',
-          sending: 'Enviando...',
-          points: 'Puntos',
-          follow: 'Seguir',
-          followers: 'Seguidores',
-          following: 'Siguiendo',
-          certificates: 'Certificados',
-          unfollow: 'Dejar de seguir',
-          pendingRequest: 'Solicitud pendiente',
-          sendFriendRequest: 'Enviar solicitud de amistad'
-          ,uploadToCommunity: 'Subir a la Comunidad'
-          ,contentType: 'Tipo de contenido'
-          ,algorithms: 'Algoritmos'
-          ,structures: 'Estructuras'
-          ,title: 'Titulo'
-          ,uploadTitlePlaceholder: 'Ej: Sistema de Login con JWT'
-          ,description: 'Descripcion'
-          ,uploadDescriptionPlaceholder: 'Describe tu proyecto...'
-          ,repositoryLink: 'Enlace del repositorio (GitHub, GitLab, etc.)'
-          ,uploadContent: 'Subir contenido'
-          ,publishProjectTitle: 'Publicar Proyecto'
-          ,category: 'Categoria'
-          ,projectTitleLabel: 'Titulo del proyecto'
-          ,projectTitlePlaceholder: 'Ej: API de tareas con Node.js'
-          ,projectDescriptionPlaceholder: 'Que incluye el proyecto?'
-          ,repositoryLinkOnly: 'Enlace del repositorio'
-          ,publishProjectButton: 'Publicar proyecto'
-          ,navHome: 'Inicio'
-          ,navCommunity: 'Comunidad'
-          ,navRanking: 'Clasificacion'
-          ,navLessons: 'Lecciones'
-          ,navProfile: 'Perfil'
-          ,htmlCssStatement: 'Replica la pagina web solo usando html y css.'
+          save: 'Save',
+          share: 'Share',
+          deletePost: 'Delete post',
+          banUser: 'Ban user',
+          noComments: 'No comments yet.',
+          writeComment: 'Write a comment...',
+          send: 'Send',
+          sending: 'Sending...',
+          points: 'Points',
+          follow: 'Follow',
+          followers: 'Followers',
+          following: 'Following',
+          certificates: 'Certificates',
+          unfollow: 'Unfollow',
+          pendingRequest: 'Request pending',
+          sendFriendRequest: 'Send friend request',
+          uploadToCommunity: 'Upload to Community',
+          contentType: 'Content type',
+          algorithms: 'Algorithms',
+          structures: 'Data Structures',
+          title: 'Title',
+          uploadTitlePlaceholder: 'Ex: JWT Login System',
+          description: 'Description',
+          uploadDescriptionPlaceholder: 'Describe your project...',
+          repositoryLink: 'Repository link (GitHub, GitLab, etc.)',
+          uploadContent: 'Upload content',
+          publishProjectTitle: 'Publish Project',
+          category: 'Category',
+          projectTitleLabel: 'Project title',
+          projectTitlePlaceholder: 'Ex: API de tareas con Node.js',
+          projectDescriptionPlaceholder: 'What does the project include?',
+          repositoryLinkOnly: 'Repository link',
+          publishProjectButton: 'Publish project',
+          navHome: 'Home',
+          navCommunity: 'Community',
+          navRanking: 'Ranking',
+          navLessons: 'Lessons',
+          navProfile: 'Profile',
+          htmlCssStatement: 'Replica la pagina web solo usando html y css.'
           ,javaStatement: 'Replica este menu y hazlo funcional usando solo java.'
           ,pythonStatement1: 'Crea 3 a 5 coches con nombres distintos.'
           ,pythonStatement2: 'Simula 10 turnos de carrera.'
@@ -1079,7 +1080,7 @@ export default {
           ,sqlStatementIntro: 'Nos piden organizar la base de datos de una app de citas (Tinder). Tenemos que poder manejar:'
           ,sqlStatement1: 'Usuarios: nombre, email, edad, genero (Masculino, Femenino u Otro), genero de preferencia (Masculino, Femenino, Otro o Todos), autodescripcion, ciudad y fecha de alta.'
           ,sqlStatement2: 'Intereses predefinidos que cada usuario pueda seleccionar.'
-          ,sqlStatement3: 'Swipes (like y dislike) entre usuarios, guardando fecha y hora, sin permitir swipe a uno mismo.'
+          ,sqlStatement3: 'Swipes (like/dislike) entre usuarios, guardando fecha y hora, sin permitir swipe a uno mismo.'
           ,sqlStatement4: 'Matches entre usuarios con fecha, sin permitir match consigo mismo.'
           ,sqlStatement5: 'Mensajes dentro de un match, guardando contenido, fecha/hora y autor del mensaje.'
           ,sqlPlaceholder: 'Escribe tu script SQL aqui'
@@ -1137,7 +1138,7 @@ export default {
           projectsFromUser: 'Posts from',
           noProjectsYet: 'This user has no posts yet.',
           viewProjectRepo: 'View repository',
-          noUsersInList: 'No users to show yet.',
+          noUsersInList: 'No hay usuarios para mostrar.',
           save: 'Save',
           share: 'Share',
           deletePost: 'Delete post',
@@ -1167,7 +1168,7 @@ export default {
           publishProjectTitle: 'Publish Project',
           category: 'Category',
           projectTitleLabel: 'Project title',
-          projectTitlePlaceholder: 'Ex: Task API with Node.js',
+          projectTitlePlaceholder: 'Ex: API de tareas con Node.js',
           projectDescriptionPlaceholder: 'What does the project include?',
           repositoryLinkOnly: 'Repository link',
           publishProjectButton: 'Publish project',
@@ -1176,22 +1177,22 @@ export default {
           navRanking: 'Ranking',
           navLessons: 'Lessons',
           navProfile: 'Profile',
-          htmlCssStatement: 'Replicate the web page using only HTML and CSS.',
-          javaStatement: 'Replicate this menu and make it functional using only Java.',
-          pythonStatement1: 'Create 3 to 5 cars with different names.',
-          pythonStatement2: 'Simulate 10 race turns.',
-          pythonStatement3: 'On each turn, every car moves forward.',
-          pythonStatement4: 'Show each car distance on every turn.',
-          pythonStatement5: 'At the end, announce the winner (the car with the longest distance).',
-          sqlStatementIntro: 'You need to design the database for a dating app. It must support:',
-          sqlStatement1: 'Users: name, email, age, gender, preferred gender, bio, city and signup date.',
-          sqlStatement2: 'Predefined interests that each user can select.',
-          sqlStatement3: 'Swipes (like/dislike) between users with timestamp, without allowing self-swipes.',
-          sqlStatement4: 'Matches between users with date, without allowing self-matches.',
-          sqlStatement5: 'Messages inside a match, storing content, timestamp and author.',
-          sqlPlaceholder: 'Write your SQL script here',
-          pythonPlaceholder: 'Write your Python code here',
-          javaPlaceholder: 'Write your Java code here'
+          htmlCssStatement: 'Replica la pagina web solo usando html y css.'
+          ,javaStatement: 'Replica este menu y hazlo funcional usando solo java.'
+          ,pythonStatement1: 'Crea 3 a 5 coches con nombres distintos.'
+          ,pythonStatement2: 'Simula 10 turnos de carrera.'
+          ,pythonStatement3: 'En cada turno, cada coche avanza.'
+          ,pythonStatement4: 'Muestra la distancia recorrida de cada coche en cada turno.'
+          ,pythonStatement5: 'Al final, anuncia el ganador (el coche con mas distancia).'
+          ,sqlStatementIntro: 'You need to design the database for a dating app. It must support:'
+          ,sqlStatement1: 'Users: name, email, age, gender, preferred gender, bio, city and signup date.'
+          ,sqlStatement2: 'Predefined interests that each user can select.'
+          ,sqlStatement3: 'Swipes (like/dislike) between users with timestamp, without allowing self-swipes.'
+          ,sqlStatement4: 'Matches between users with date, without allowing self-matches.'
+          ,sqlStatement5: 'Messages inside a match, storing content, timestamp and author.'
+          ,sqlPlaceholder: 'Write your SQL script here'
+          ,pythonPlaceholder: 'Write your Python code here'
+          ,javaPlaceholder: 'Write your Java code here'
         }
       }
 
@@ -1341,7 +1342,7 @@ export default {
 
         this.battleSyncData = {
           waiting: normalized.waiting,
-          mySubmitted: normalized.mySubmitted,
+          mySubmitted: normalized.mySubmitted || true,
           opponentSubmitted: normalized.opponentSubmitted,
           message: normalized.message
         }
@@ -3277,7 +3278,7 @@ export default {
 .vscode-topbar {
   height: 30px;
   background: #252526;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid #3a3a3a;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -4651,10 +4652,7 @@ export default {
   text-decoration: none;
   font-size: 12px;
   font-weight: 700;
-}
-
-.post-project-link:hover {
-  color: #00d887;
+  text-decoration: none;
 }
 
 .post-actions {
