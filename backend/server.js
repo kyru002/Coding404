@@ -2,15 +2,17 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
+const http = require('http');
 const authRoutes = require('./routes/auth');
 const { learningRouter, ensureCurriculaClassified, ensureLeaguesSeeded } = require('./routes/learning');
-const { socialRouter, ensureDemoUsersSeeded } = require('./routes/social');
+const { socialRouter, ensureDemoUsersSeeded, initSocketIO } = require('./routes/social');
 
 // Cargar variables de entorno
 dotenv.config({ path: '.env.local', quiet: true });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const server = http.createServer(app);
 
 const isDatabaseReady = () => mongoose.connection.readyState === 1;
 
@@ -47,18 +49,23 @@ const connectDB = async () => {
       await ensureDemoUsersSeeded();
     }
   } catch (error) {
-    console.error('❌ Error al inicializar backend:', error.message);
-    process.exit(1);
+    throw error;
   }
 };
 
 // Iniciar servidor solo cuando la DB esté conectada
 const startServer = async () => {
-  await connectDB();
+  initSocketIO(server);
 
-  app.listen(PORT, '0.0.0.0', () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Backend listo en http://localhost:${PORT} (DB + temarios ES/EN + ligas)`);
   });
+
+  try {
+    await connectDB();
+  } catch (error) {
+    console.error('❌ Error al inicializar backend:', error.message);
+  }
 };
 
 startServer();
