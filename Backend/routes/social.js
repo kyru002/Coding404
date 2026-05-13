@@ -10,7 +10,13 @@ const Notification = require('../models/Notification');
 const Follow = require('../models/Follow');
 const BattleRequest = require('../models/BattleRequest');
 const BattleMatch = require('../models/BattleMatch');
-const io = require('socket.io')(server); // Asegúrate de inicializar el servidor con socket.io
+
+let io = null;
+
+const initSocketIO = (server) => {
+  io = require('socket.io')(server);
+  return io;
+};
 
 const router = express.Router();
 
@@ -1176,7 +1182,9 @@ router.post('/community/posts', async (req, res) => {
       .populate('comments.userId', 'username fullName avatarUrl');
 
     // Emitir evento de nueva publicación
-    io.emit('newPost', formatCommunityPost(post, userId));
+    if (io) {
+      io.emit('newPost', formatCommunityPost(post, userId));
+    }
 
     return res.status(201).json({
       message: 'Publicacion creada.',
@@ -2391,4 +2399,5 @@ router.put('/profile/:userId/avatar', async (req, res) => {
 module.exports = {
   socialRouter: router,
   ensureDemoUsersSeeded,
+  initSocketIO,
 };
