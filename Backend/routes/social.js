@@ -453,9 +453,7 @@ const ensureDemoUsersSeeded = async () => {
   // Avatar data URLs (simple colored gradients)
   const avatars = [
     'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAKPGWVYXV0b21hdGljPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZDEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYigzNSw2MSwyNTUpO3N0b3Atb3BhY2l0eToxIiAvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiKDAsMTEwLDI1NSk7c3RvcC1vcGFjaXR5OjEiIC8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjMyMCIgaGVpZ2h0PSIzMjAiIGZpbGw9InVybCgjZ3JhZDEpIiAvPgogIDx0ZXh0IHg9IjE2MCIgeT0iMTYwIiBmb250LXNpemU9IjEyMCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmb250LXdlaWdodD0iYm9sZCIgZm9udC1mYW1pbHk9IkFyaWFsIj5LOjwvdGV4dD4KPC9zdmc+',
-    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAKPGWEVLJ+UnZlcnRHeHA/PC9kZWZzPgogIDxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIiBmaWxsPSJ1cmwoI2dyYWQyKSIgLz4KICAKICAKICAKICAKICAGPC9zdmc+',
-    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAKPGEF0dGh1dDwvZGVmcz4KICAKICAKICAKICAKICAKICAGPC9zdmc+',
-    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAKPGEF0dGh1dDwvZGVmcz4KICAKICAKICAKICAKICAKICAKPJMDAGATAGVT0JCA8L3N2Zz4='
+    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjMyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAKPGWEVLJ+UnZlcnRHeHA/PC9kZWZzPgogIDxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iMzIwIiBmaWxsPSJ1cmwoI2dyYWQyKSIgLz4KICAKICAKICAKICAKICAKICAKPJMDAGATAGVT0JCA8L3N2Zz4='
   ];
 
   // Create avatars for demo users
@@ -857,7 +855,7 @@ const ensureDemoUsersSeeded = async () => {
     });
   }
 
-});
+};
 
 router.post('/activity/:userId', async (req, res) => {
   try {

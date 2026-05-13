@@ -11,7 +11,7 @@ const run = (name, cwd, args) => {
   const child = spawn(npmCmd, args, {
     cwd,
     stdio: 'inherit',
-    shell: false,
+    shell: true, // Cambiado a true para compatibilidad con Windows
     env: process.env,
   });
 
