@@ -45,8 +45,14 @@ const strictLimiter = rateLimit({
   skipSuccessfulRequests: false,
 });
 
-// Aplicar rate limiting global
-app.use('/api/', limiter);
+// Aplicar rate limiting global solo a operaciones no-GET para no bloquear la SPA con muchos fetch de lectura
+app.use('/api/', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  return limiter(req, res, next);
+});
 
 // Ruta de prueba
 app.get('/', (req, res) => {
