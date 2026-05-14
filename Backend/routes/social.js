@@ -1004,7 +1004,7 @@ router.get('/users', async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query, { page: 1, limit: 200, maxLimit: 500 });
 
-    const users = await User.find(PUBLIC_USER_FILTER, { username: 1, fullName: 1, avatarUrl: 1, bio: 1 })
+    const users = await User.find({ isBanned: { $ne: true } }, { username: 1, fullName: 1, avatarUrl: 1, bio: 1 })
       .sort({ registeredAt: 1, username: 1 })
       .skip(skip)
       .limit(limit)
