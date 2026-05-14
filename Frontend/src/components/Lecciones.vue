@@ -316,6 +316,11 @@ export default {
     learningPath() {
       return this.user?.learningPath || this.fallbackLearningPath
     },
+    isDemoUser() {
+      const username = String(this.user?.username || '').trim().toLowerCase()
+      const email = String(this.user?.email || '').trim().toLowerCase()
+      return username === 'demo' || email === 'demo@coding404.dev'
+    },
     coursesWithState() {
       const startedCourses = new Set(this.learningPath.startedCourses || [])
       const startedLessons = new Set(this.learningPath.startedLessons || [])
@@ -359,7 +364,7 @@ export default {
         lessons: course.lessons.map((lesson) => ({
           ...lesson,
           started: startedLessons.has(lesson.id),
-          completed: allCompletedLessons.has(lesson.id)
+          completed: this.isDemoUser || allCompletedLessons.has(lesson.id)
         }))
       }))
     },
@@ -586,7 +591,7 @@ export default {
 
       return state.levels.map((level) => ({
         ...level,
-        completed: level.id <= state.completedCount
+        completed: this.isDemoUser || level.id <= state.completedCount
       }))
     },
     getVisibleLevelsByLanguage(language) {
@@ -618,6 +623,8 @@ export default {
       }))
     },
     isTheoryLevelUnlocked(language, levelId) {
+      if (this.isDemoUser) return true
+
       const state = this.getTheoryState(language)
       if (!state) return true
       return levelId <= (state.completedCount + 1)
@@ -842,6 +849,10 @@ export default {
           const progressData = await progressResponse.json()
           const completedLevels = progressData?.progress?.completedLevels || []
           completedCount = Array.isArray(completedLevels) ? completedLevels.length : 0
+        }
+
+        if (this.isDemoUser) {
+          completedCount = levels.length
         }
 
         this.languageTheoryState = {

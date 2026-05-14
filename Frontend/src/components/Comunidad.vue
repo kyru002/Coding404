@@ -2176,7 +2176,7 @@ export default {
         const data = await response.json()
 
         if (!response.ok) {
-          this.communityPosts = []
+          this.communityPosts = this.getSampleCommunityPosts()
           return
         }
 

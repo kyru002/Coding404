@@ -46,7 +46,5 @@ const lessonSchema = new mongoose.Schema(
 );
 
 lessonSchema.index({ courseId: 1, orderInCourse: 1 }, { unique: true });
-// Índice para búsqueda rápida de todas las lecciones de un curso
-lessonSchema.index({ courseId: 1, orderInCourse: 1 });
 
 module.exports = mongoose.model('Lesson', lessonSchema);
