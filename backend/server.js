@@ -31,7 +31,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Rate limiting: 100 requests por 15 minutos por IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 5000,
   message: 'Demasiadas solicitudes. Intenta de nuevo más tarde.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -40,7 +40,7 @@ const limiter = rateLimit({
 // Rate limiting más estricto para endpoints críticos (login, progreso)
 const strictLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 1000,
   message: 'Demasiadas solicitudes a este endpoint. Intenta de nuevo más tarde.',
   skipSuccessfulRequests: false,
 });
