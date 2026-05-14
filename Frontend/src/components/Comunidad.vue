@@ -1010,9 +1010,7 @@ export default {
         this.socket.disconnect()
         this.socket = null
       }
-    }
-  },
-  methods: {
+    },
     t(key) {
       const dict = {
         es: {
@@ -2089,15 +2087,29 @@ export default {
       const userId = this.getCurrentUserId()
 
       try {
-        const response = await fetch(`${this.socialApiBaseUrl}/users`)
-        const data = await response.json()
+        const pageSize = 200
+        const users = []
+        let page = 1
 
-        if (!response.ok) {
-          this.challengeOpponents = [...this.challengeOpponentsFallback]
-          return
+        while (true) {
+          const response = await fetch(`${this.socialApiBaseUrl}/users?page=${page}&limit=${pageSize}`)
+          const data = await response.json().catch(() => ({}))
+
+          if (!response.ok) {
+            this.challengeOpponents = [...this.challengeOpponentsFallback]
+            return
+          }
+
+          const pageUsers = Array.isArray(data?.users) ? data.users : []
+          users.push(...pageUsers)
+
+          if (pageUsers.length < pageSize) {
+            break
+          }
+
+          page += 1
         }
 
-        const users = Array.isArray(data?.users) ? data.users : []
         const filteredUsers = userId
           ? users.filter((candidate) => String(candidate.userId || candidate._id || '') !== String(userId))
           : users
