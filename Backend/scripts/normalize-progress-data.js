@@ -1,6 +1,6 @@
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-const { seedCurricula } = require('../data/curriculaSeed');
+const Course = require('../models/Course');
 const UserLanguageProgress = require('../models/UserLanguageProgress');
 const UserLeague = require('../models/UserLeague');
 const League = require('../models/League');
@@ -20,8 +20,6 @@ const normalizeLanguage = (language = '') => {
   return alias || value;
 };
 
-const supportedLanguages = new Set(seedCurricula.map((item) => normalizeLanguage(item.language)));
-
 const getLeagueName = (points) => {
   if (points >= 1000) return 'Legendary Lead';
   if (points >= 800) return 'Tech Architect';
@@ -35,6 +33,9 @@ const getLeagueName = (points) => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ MongoDB conectado\n');
+
+    const courseLanguages = await Course.distinct('language');
+    const supportedLanguages = new Set(courseLanguages.map((item) => normalizeLanguage(item)).filter(Boolean));
 
     const allProgress = await UserLanguageProgress.find({}).lean();
     let deleted = 0;

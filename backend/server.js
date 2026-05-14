@@ -90,15 +90,17 @@ const connectDB = async () => {
 const startServer = async () => {
   initSocketIO(server);
 
+  try {
+    await connectDB();
+    console.log(`✅ MongoDB conectado (${mongoose.connection.host}/${mongoose.connection.name})`);
+  } catch (error) {
+    console.error('❌ Error al conectar con MongoDB:', error.message);
+    process.exit(1);
+  }
+
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Backend listo en http://localhost:${PORT} (DB + temarios ES/EN + ligas)`);
   });
-
-  try {
-    await connectDB();
-  } catch (error) {
-    console.error('❌ Error al inicializar backend:', error.message);
-  }
 };
 
 startServer();

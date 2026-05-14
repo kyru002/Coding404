@@ -489,8 +489,6 @@
 <script>
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { API_BASE_URL } from '../config/api'
-import htmlLocalData from '../data/languages/html.json'
-import { cssData, javascriptData, vueData, sqlData, pythonData, javaData, phpData, nodeData } from '../data/languages/courses'
 
 export default {
   name: 'Inicio',
@@ -599,16 +597,7 @@ export default {
   },
   computed: {
     displayLevels() {
-      const remoteLevels = Array.isArray(this.currentLanguageData?.levels)
-        ? this.currentLanguageData.levels
-        : []
-
-      if (remoteLevels.length > 0) {
-        return remoteLevels
-      }
-
-      const localFallback = this.getLocalCurriculumFallback(this.currentLanguage)
-      return Array.isArray(localFallback?.levels) ? localFallback.levels : []
+      return Array.isArray(this.currentLanguageData?.levels) ? this.currentLanguageData.levels : []
     },
     totalLevels() {
       return this.displayLevels.length || 30
@@ -1501,58 +1490,6 @@ export default {
 
       return map[languageName] || languageName
     },
-    getLocalCurriculumFallback(languageName = this.currentLanguage) {
-      const backendLanguage = this.getBackendLanguage(languageName)
-      const key = String(backendLanguage || '').toLowerCase()
-
-      const localMap = {
-        html: htmlLocalData,
-        css: cssData,
-        javascript: javascriptData,
-        'node.js': nodeData,
-        node: nodeData,
-        sql: sqlData,
-        python: pythonData,
-        java: javaData,
-        php: phpData,
-        vue: vueData
-      }
-
-      const candidate = localMap[key]
-      if (candidate?.levels?.length) {
-        return {
-          ...candidate,
-          language: languageName,
-          levels: candidate.levels.map((level, index) => ({
-            ...level,
-            id: Number(level.id || index + 1)
-          }))
-        }
-      }
-
-      return {
-        language: languageName,
-        description: `Ruta base de ${languageName}`,
-        levels: Array.from({ length: 30 }, (_, index) => {
-          const id = index + 1
-          const isExam = id % 10 === 0
-          return {
-            id,
-            name: `${languageName} · Nivel ${id}`,
-            description: `Nivel ${id} de ${languageName}`,
-            difficulty: id <= 10 ? 'fácil' : id <= 20 ? 'medio' : 'difícil',
-            points: id <= 10 ? 75 : id <= 20 ? 100 : 125,
-            isExam,
-            content: {
-              title: `${languageName} · Nivel ${id}`,
-              theory: [`Introducción al nivel ${id} de ${languageName}.`, 'Aplica la teoría en una práctica corta.'],
-              example: ''
-            },
-            tests: []
-          }
-        })
-      }
-    },
     getShortLevelTitle(level) {
       const rawName = String(level?.name || level?.content?.title || '').trim()
       if (!rawName) return `Nivel ${level?.id || ''}`.trim()
@@ -1595,8 +1532,8 @@ export default {
           return
         }
 
-        const fallbackCurriculum = this.getLocalCurriculumFallback(languageName)
-        this.currentLanguageData = fallbackCurriculum
+        this.currentLanguageData = null
+        this.errorMessage = error?.message || `No se pudo cargar el temario de ${languageName}`
       }
     },
     async handleNavigateSection(section) {
