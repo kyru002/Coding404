@@ -225,6 +225,38 @@ const localizeCurriculumLevel = (level, uiLanguage = 'es') => {
   return localizeStructuredValue(level, 'en');
 };
 
+// Caché en memoria para currículum (24 horas TTL)
+const CURRICULUM_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas en ms
+const curriculumCache = new Map();
+
+const getCacheKey = (language, uiLanguage) => `${String(language).toLowerCase()}-${uiLanguage}`;
+
+const isCacheValid = (cacheEntry) => {
+  if (!cacheEntry) return false;
+  const now = Date.now();
+  return now - cacheEntry.timestamp < CURRICULUM_CACHE_TTL;
+};
+
+const getCachedCurriculum = (language, uiLanguage) => {
+  const key = getCacheKey(language, uiLanguage);
+  const entry = curriculumCache.get(key);
+  if (isCacheValid(entry)) {
+    return entry.data;
+  }
+  if (entry) {
+    curriculumCache.delete(key); // Limpiar entrada expirada
+  }
+  return null;
+};
+
+const setCachedCurriculum = (language, uiLanguage, data) => {
+  const key = getCacheKey(language, uiLanguage);
+  curriculumCache.set(key, {
+    data,
+    timestamp: Date.now(),
+  });
+};
+
 const getLeague = (points) => {
   let leagueName = 'Junior Explorer';
   
@@ -403,6 +435,12 @@ router.get('/curricula/:language', async (req, res) => {
     const language = normalizeLanguage(req.params.language);
     const uiLanguage = normalizeUiLanguage(req.query?.lang);
 
+    // Verificar caché primero
+    const cachedCurriculum = getCachedCurriculum(language, uiLanguage);
+    if (cachedCurriculum) {
+      return res.json({ curriculum: cachedCurriculum });
+    }
+
     await ensureCurriculaClassified();
     const CourseModel = uiLanguage === 'en' ? CourseEn : Course;
     const LessonModel = uiLanguage === 'en' ? LessonEn : Lesson;
@@ -416,6 +454,7 @@ router.get('/curricula/:language', async (req, res) => {
         const localizedHtmlCurriculum = uiLanguage === 'en'
           ? localizeStructuredValue(htmlCurriculum, 'en')
           : htmlCurriculum;
+        setCachedCurriculum(language, uiLanguage, localizedHtmlCurriculum);
         return res.json({ curriculum: localizedHtmlCurriculum });
       }
       return res.status(404).json({ message: 'Temario no encontrado para ese lenguaje.' });
@@ -497,6 +536,9 @@ router.get('/curricula/:language', async (req, res) => {
       description: course?.descriptionI18n?.[uiLanguage] || course.description,
       levels: normalizedLevels,
     };
+
+    // Guardar en caché antes de retornar
+    setCachedCurriculum(language, uiLanguage, curriculum);
 
     return res.json({ curriculum });
   } catch (error) {
