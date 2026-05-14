@@ -71,6 +71,29 @@
       </section>
 
       <section class="section-block">
+        <h2>SOLICITUDES</h2>
+        <div v-if="requests.length === 0" class="empty">No tienes solicitudes pendientes.</div>
+        <div v-else class="requests-list">
+          <div v-for="request in requests" :key="request.requestId" class="request-card">
+            <img v-if="request.avatarUrl" :src="request.avatarUrl" :alt="request.fullName" class="request-avatar">
+            <div v-else class="request-avatar request-avatar-default">👤</div>
+            <div class="request-info">
+              <h4>{{ request.fullName || request.username }}</h4>
+              <p class="request-username">@{{ request.username }}</p>
+              <div v-if="request.league" class="request-league">
+                <img :src="request.league.image" :alt="request.league.name" class="request-league-img">
+                <span>{{ request.league.name }}</span>
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="accept" @click="respondRequest(request.requestId, true)">Aceptar</button>
+              <button class="reject" @click="respondRequest(request.requestId, false)">Rechazar</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-block">
         <h2>MIS PROYECTOS</h2>
         <div class="projects-list">
           <p v-if="myProjects.length === 0" class="empty">Aún no has subido proyectos.</p>
@@ -131,29 +154,6 @@
               Marcar leida
             </button>
           </article>
-        </div>
-      </section>
-
-      <section class="section-block">
-        <h2>SOLICITUDES</h2>
-        <div v-if="requests.length === 0" class="empty">No tienes solicitudes pendientes.</div>
-        <div v-else class="requests-list">
-          <div v-for="request in requests" :key="request.requestId" class="request-card">
-            <img v-if="request.avatarUrl" :src="request.avatarUrl" :alt="request.fullName" class="request-avatar">
-            <div v-else class="request-avatar request-avatar-default">👤</div>
-            <div class="request-info">
-              <h4>{{ request.fullName || request.username }}</h4>
-              <p class="request-username">@{{ request.username }}</p>
-              <div v-if="request.league" class="request-league">
-                <img :src="request.league.image" :alt="request.league.name" class="request-league-img">
-                <span>{{ request.league.name }}</span>
-              </div>
-            </div>
-            <div class="request-actions">
-              <button class="accept" @click="respondRequest(request.requestId, true)">Aceptar</button>
-              <button class="reject" @click="respondRequest(request.requestId, false)">Rechazar</button>
-            </div>
-          </div>
         </div>
       </section>
 

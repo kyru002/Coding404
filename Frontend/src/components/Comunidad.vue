@@ -748,6 +748,7 @@ export default {
     return {
       socialApiBaseUrl: `${API_BASE_URL}/api/social`,
       learningApiBaseUrl: `${API_BASE_URL}/api/learning`,
+      socket: null,
       uiLanguage: 'es',
       activeTab: 'practica',
       selectedChallengeLanguage: '',
@@ -970,12 +971,46 @@ export default {
   mounted() {
     this.refreshUiLanguageFromStorage()
     this.loadRepositoryItems()
+    this.initializeSocket()
     window.addEventListener('storage', this.onStorageLanguageChanged)
   },
   beforeUnmount() {
     this.clearChallengeSearchTimers()
     this.clearBattleStatusPolling()
+    this.disconnectSocket()
     window.removeEventListener('storage', this.onStorageLanguageChanged)
+  },
+  methods: {
+    initializeSocket() {
+      try {
+        this.socket = io(this.socialApiBaseUrl, {
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: 5
+        })
+
+        if (!this.socket) return
+
+        this.socket.on('newPost', (newPost) => {
+          if (newPost && newPost.id && !this.communityPosts.find(p => p.id === newPost.id)) {
+            this.communityPosts.unshift(newPost)
+          }
+        })
+
+        this.socket.on('disconnect', () => {
+          // Silencioso: solo log si es necesario
+        })
+      } catch (error) {
+        // Socket.io puede no estar disponible en ciertos entornos
+      }
+    },
+    disconnectSocket() {
+      if (this.socket) {
+        this.socket.disconnect()
+        this.socket = null
+      }
+    }
   },
   methods: {
     t(key) {

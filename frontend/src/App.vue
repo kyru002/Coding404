@@ -1,13 +1,13 @@
 <script setup>
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, onBeforeUnmount, defineAsyncComponent } from 'vue'
 import Login from './components/Login.vue'
 import Register from './components/Register.vue'
 import Carga from './components/Carga.vue'
 import Inicio from './components/Inicio.vue'
 import Comunidad from './components/Comunidad.vue'
-import Clasificacion from './components/Clasificacion.vue'
-import Lecciones from './components/Lecciones.vue'
-import Perfil from './components/Perfil.vue'
+const Clasificacion = defineAsyncComponent(() => import('./components/Clasificacion.vue'))
+const Lecciones = defineAsyncComponent(() => import('./components/Lecciones.vue'))
+const Perfil = defineAsyncComponent(() => import('./components/Perfil.vue'))
 import { API_BASE_URL } from './config/api'
 
 const currentView = ref('login')
@@ -86,6 +86,12 @@ const showHome = (user = null) => {
     currentUser.value = user
     refreshPendingRequestsCount(user)
     startBattleInvitePolling(user)
+    // Guardar sesión para persistencia tras recargar
+    try {
+      localStorage.setItem('currentUser', JSON.stringify(user))
+    } catch (error) {
+      console.error('Error saving session:', error)
+    }
   }
 
   if (user?.isAdmin) {
@@ -104,11 +110,7 @@ const showInicio = () => {
 }
 
 const changeSection = (section) => {
-  if (currentUser.value?.isAdmin && section !== 'comunidad') {
-    activeSection.value = 'comunidad'
-    return
-  }
-
+  // Permitir cambio de sección para todos los usuarios
   activeSection.value = section
   refreshPendingRequestsCount()
 }
@@ -268,13 +270,38 @@ const handleLogout = () => {
   activeBattleLaunch.value = null
   lastLaunchedBattleMatchId.value = ''
   currentView.value = 'login'
+  localStorage.removeItem('currentUser')
 }
+
+const restoreSessionFromStorage = () => {
+  try {
+    const stored = localStorage.getItem('currentUser')
+    if (stored) {
+      const user = JSON.parse(stored)
+      if (user?.userId) {
+        showHome(user)
+        return true
+      }
+    }
+  } catch (error) {
+    console.error('Error restoring session:', error)
+    localStorage.removeItem('currentUser')
+  }
+  return false
+}
+
+const onBeforeMount = () => {
+  refreshUiLanguage()
+  if (!restoreSessionFromStorage()) {
+    currentView.value = 'login'
+  }
+}
+
+
 
 onBeforeUnmount(() => {
   stopBattleInvitePolling()
 })
-
-refreshUiLanguage()
 </script>
 
 <template>
