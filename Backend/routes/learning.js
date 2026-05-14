@@ -517,6 +517,53 @@ router.get('/progress/:userId/:language', async (req, res) => {
       return res.status(400).json({ message: `Lenguaje inválido para progreso: ${language}` });
     }
 
+    // Si el usuario es el Demo (usuario de demostración), devolvemos progreso completo.
+    const user = await User.findById(userId, { username: 1 }).lean();
+    if (user && String(user.username).toLowerCase() === 'demo') {
+      const allLevels = Array.from({ length: LEVELS_PER_LANGUAGE }, (_, i) => i + 1);
+
+      // Persistir progreso completo para el lenguaje solicitado
+      const fullProgressForRequested = {
+        userId,
+        language,
+        completedLevels: allLevels,
+        completionPercentage: 100,
+        totalPoints: allLevels.length * POINTS_PER_LEVEL,
+        completedAt: new Date(),
+        lastActivityAt: new Date(),
+      };
+
+      await UserLanguageProgress.findOneAndUpdate(
+        { userId, language },
+        fullProgressForRequested,
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+
+      // Asegurar que el usuario demo tenga progreso completo en todos los lenguajes soportados
+      const languagesToSeed = Array.from(SUPPORTED_LANGUAGES);
+      const ops = languagesToSeed.map((lang) => {
+        const doc = {
+          userId,
+          language: lang,
+          completedLevels: allLevels,
+          completionPercentage: 100,
+          totalPoints: allLevels.length * POINTS_PER_LEVEL,
+          completedAt: new Date(),
+          lastActivityAt: new Date(),
+        };
+        return UserLanguageProgress.findOneAndUpdate(
+          { userId, language: lang },
+          doc,
+          { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+        );
+      });
+
+      // Ejecutar en paralelo
+      await Promise.all(ops);
+
+      return res.json({ progress: fullProgressForRequested });
+    }
+
     const progress = await UserLanguageProgress.findOne({ userId, language });
 
     return res.json({
