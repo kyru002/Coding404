@@ -48,5 +48,9 @@ const userLanguageProgressSchema = new mongoose.Schema(
 );
 
 userLanguageProgressSchema.index({ userId: 1, language: 1 }, { unique: true });
+// Índices adicionales para optimizar leaderboard y búsquedas
+userLanguageProgressSchema.index({ totalPoints: -1, lastActivityAt: -1 }); // Leaderboard
+userLanguageProgressSchema.index({ userId: 1, completionPercentage: -1 }); // Progreso por usuario
+userLanguageProgressSchema.index({ lastActivityAt: -1 }); // Actividad reciente
 
 module.exports = mongoose.model('UserLanguageProgress', userLanguageProgressSchema);

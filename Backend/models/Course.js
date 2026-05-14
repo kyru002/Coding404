@@ -36,4 +36,6 @@ const courseSchema = new mongoose.Schema(
   }
 );
 
+courseSchema.index({ language: 1, createdAtCourse: -1 }); // Búsqueda por lenguaje ordenada por fecha
+
 module.exports = mongoose.model('Course', courseSchema);

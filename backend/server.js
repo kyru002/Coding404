@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const http = require('http');
@@ -16,10 +18,35 @@ const server = http.createServer(app);
 
 const isDatabaseReady = () => mongoose.connection.readyState === 1;
 
+// Caché simple en memoria para currículum (24 horas)
+const curriculumCache = new Map();
+const CURRICULUM_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+
 // Middlewares
 app.use(cors());
+app.use(compression()); // Compresión gzip automática
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting: 100 requests por 15 minutos por IP
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Demasiadas solicitudes. Intenta de nuevo más tarde.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting más estricto para endpoints críticos (login, progreso)
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'Demasiadas solicitudes a este endpoint. Intenta de nuevo más tarde.',
+  skipSuccessfulRequests: false,
+});
+
+// Aplicar rate limiting global
+app.use('/api/', limiter);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -34,8 +61,8 @@ app.use('/api', (req, res, next) => {
   return next();
 });
 
-// Rutas de autenticacion
-app.use('/api/auth', authRoutes);
+// Rutas de autenticacion con rate limiting estricto
+app.use('/api/auth', strictLimiter, authRoutes);
 app.use('/api/learning', learningRouter);
 app.use('/api/social', socialRouter);
 
