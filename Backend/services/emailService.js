@@ -15,7 +15,6 @@ const loadLogo = () => {
     logoBase64 = 'data:image/png;base64,' + logoBuffer.toString('base64');
     return logoBase64;
   } catch (error) {
-    console.warn('⚠️ Could not load logo image:', error.message);
     return null;
   }
 };
@@ -43,7 +42,6 @@ const sendWelcomeEmail = async (user) => {
   try {
     // Validar que tenemos las credenciales del email configuradas
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-      console.warn('⚠️ Email service not configured. Skipping welcome email.');
       return true;
     }
 

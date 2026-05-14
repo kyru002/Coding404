@@ -15,7 +15,7 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 			const registrations = await navigator.serviceWorker.getRegistrations()
 			await Promise.all(registrations.map((registration) => registration.unregister()))
 		} catch (error) {
-			console.warn('No se pudieron limpiar los Service Workers antiguos', error)
+			// Ignorar errores de limpieza de Service Workers
 		}
 	})
 }

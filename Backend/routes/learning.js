@@ -923,10 +923,6 @@ router.post('/complete-lesson/:userId/:language', async (req, res) => {
     // Verificar que se completaron TODOS los 30 niveles del lenguaje
     const REQUIRED_COMPLETED_LEVELS = 30;
 
-    console.log(
-      `📊 ${language}: ${completedCount}/${REQUIRED_COMPLETED_LEVELS} niveles completados`
-    );
-
     // Si no están todos los 30 completados, no marcar la lección
     if (completedCount < REQUIRED_COMPLETED_LEVELS) {
       return res.json({
@@ -963,7 +959,6 @@ router.post('/complete-lesson/:userId/:language', async (req, res) => {
     if (!user.learningPath.completedLessons.includes(lessonId)) {
       user.learningPath.completedLessons.push(lessonId);
       await user.save();
-      console.log(`✅ Lección "${lessonId}" completada para usuario ${user.username}`);
     }
 
     return res.json({

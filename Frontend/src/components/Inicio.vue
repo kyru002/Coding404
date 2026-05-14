@@ -1336,7 +1336,7 @@ export default {
       try {
         localStorage.setItem('inicio-ui-language', this.uiLanguage)
       } catch (error) {
-        console.warn('No se pudo persistir el idioma de interfaz', error)
+        // Ignorar error de persistencia
       }
 
       // Recarga el temario activo desde backend en el idioma seleccionado.
@@ -1357,7 +1357,7 @@ export default {
       try {
         localStorage.setItem(key, String(languageName))
       } catch (error) {
-        console.warn('No se pudo persistir el idioma seleccionado', error)
+        // Ignorar error de persistencia
       }
     },
     restoreCurrentLanguageSelection() {
@@ -1378,7 +1378,6 @@ export default {
 
         return true
       } catch (error) {
-        console.warn('No se pudo restaurar el idioma seleccionado', error)
         return false
       }
     },
@@ -1422,9 +1421,6 @@ export default {
         this.currentLanguage = mapping.language
         this.selectedLearningPath = mapping.path
         this.persistCurrentLanguageSelection(mapping.language)
-        console.log(`Programmer type '${programmerType}' mapped to language '${mapping.language}'`)
-      } else {
-        console.warn(`Programmer type '${programmerType}' not found in typeMap. Using default (HTML).`)
       }
     },
     async selectLearningPath(pathId) {
@@ -1569,7 +1565,6 @@ export default {
       const requestId = ++this.languageRequestId
 
       try {
-        console.log(`Loading language: ${languageName}`)
         const backendLanguage = this.getBackendLanguage(languageName)
         const encodedLanguage = encodeURIComponent(backendLanguage)
         const response = await fetch(`${this.apiBaseUrl}/curricula/${encodedLanguage}?lang=${this.uiLanguage}`)
@@ -1595,20 +1590,16 @@ export default {
           ...data.curriculum,
           language: languageName
         }
-        console.log(`Language '${languageName}' loaded successfully. Levels: ${data.curriculum.levels?.length || 0}`)
       } catch (error) {
         if (requestId !== this.languageRequestId) {
           return
         }
 
-        console.error(`Error loading language '${languageName}':`, error.message)
         const fallbackCurriculum = this.getLocalCurriculumFallback(languageName)
         this.currentLanguageData = fallbackCurriculum
-        console.warn(`Fallback local curriculum loaded for '${languageName}'. Levels: ${fallbackCurriculum.levels?.length || 0}`)
       }
     },
     async handleNavigateSection(section) {
-      console.log(`Navegando a sección: ${section}`)
       await this.saveProgress() // Guardar progreso ANTES de cambiar de sección
       this.$emit('change-section', section)
     },
@@ -1617,7 +1608,6 @@ export default {
       this.currentLanguage = language.name
       this.persistCurrentLanguageSelection(language.name)
       this.selectedLevel = null
-      console.log(`Switched to language: ${language.name}`)
       await this.loadLanguage(language.name)
       await this.loadProgress(language.name)
       this.showLanguageModal = false
@@ -2392,7 +2382,6 @@ export default {
         }
         this.closeLevel()
       } else {
-        // Pasar a la siguiente prueba
         this.currentTestNumber++
         this.resetQuestionAndPuzzleState()
       }
@@ -2419,19 +2408,9 @@ export default {
         const data = await response.json()
         const progressData = data.progress || data
         const completedCount = progressData.completedLevels?.length || 0
-        const LEVELS_PER_LANGUAGE = 30  // Total de niveles en cualquier lenguaje
-        const POINTS_PER_LEVEL = 2
+        const LEVELS_PER_LANGUAGE = 30
 
-        console.log(
-          `📊 ${this.currentLanguage}: ${completedCount}/${LEVELS_PER_LANGUAGE} niveles completados`
-        )
-
-        // Solo marcar como completada si se completaron TODOS los 30 niveles
         if (completedCount === LEVELS_PER_LANGUAGE && completedCount > 0) {
-          // El usuario completó todos los niveles de este lenguaje
-          console.log(
-            `🏆 ¡${this.currentLanguage} completado! ${completedCount}/${LEVELS_PER_LANGUAGE} niveles`
-          )
           await this.notifyLessonCompletion(this.getBackendLanguage())
         }
       } catch (error) {
@@ -2457,7 +2436,6 @@ export default {
 
         if (response.ok) {
           const data = await response.json()
-          console.log(`✅ Lección "${data.lessonId}" marcada como completada`)
           // Emitir evento para que otros componentes se actualicen
           this.$emit('lesson-completed', data.lessonId)
         }
@@ -2468,7 +2446,6 @@ export default {
     async saveProgress() {
       const userId = this.getActiveUserId()
       if (!userId) {
-        console.warn('⚠️ Usuario no identificado, no se puede guardar progreso')
         return
       }
 
@@ -2487,18 +2464,15 @@ export default {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error(`❌ Error guardando progreso: ${response.status}`, errorData)
           return
         }
 
         const data = await response.json()
-        console.log(`✅ Progreso guardado para ${this.currentLanguage}:`, data.progress)
 
         // Después de guardar el progreso, verifica si se completó el lenguaje
         await this.checkLanguageCompletion()
       } catch (error) {
-        console.error('❌ No se pudo guardar el progreso en servidor:', error)
+        // Ignorar error de guardado
       }
     },
     async loadProgress(languageName = this.currentLanguage) {
@@ -2533,7 +2507,6 @@ export default {
                 }
 
         if (!data?.progress) {
-          console.warn('⚠️ No hay progreso en BD, empezando desde cero')
           this.completedLevels = []
           this.totalPoints = 0
           return
@@ -2541,17 +2514,11 @@ export default {
 
         this.completedLevels = Array.isArray(data.progress.completedLevels) ? data.progress.completedLevels : []
         this.totalPoints = Number(data.progress.totalPoints || 0)
-        
-        console.log(`✅ Progreso cargado para ${languageName}:`, {
-          completedLevels: this.completedLevels,
-          totalPoints: this.totalPoints
-        })
       } catch (error) {
         if (requestId !== this.progressRequestId) {
           return
         }
 
-        console.error('❌ No se pudo cargar progreso desde servidor:', error)
         this.completedLevels = []
         this.totalPoints = 0
       }
@@ -2735,7 +2702,7 @@ export default {
         this.uiLanguage = savedUiLanguage
       }
     } catch (error) {
-      console.warn('No se pudo restaurar el idioma de interfaz', error)
+      // Ignorar error de restauración
     }
 
     const initialUserId = this.getActiveUserId()
