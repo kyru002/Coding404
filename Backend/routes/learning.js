@@ -831,55 +831,11 @@ router.get('/leaderboard', async (req, res) => {
   }
 });
 
-// Endpoint para completar todos los cursos de un usuario (útil para pruebas)
-router.post('/complete-all-courses/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'ID de usuario inválido.' });
-    }
-
-    const userExists = await User.exists({ _id: userId });
-    if (!userExists) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
-
-    const languages = ['Python', 'JavaScript', 'HTML', 'CSS', 'Java', 'SQL', 'Vue', 'PHP', 'Node.js'];
-    const allCompletedLevels = Array.from({ length: 30 }, (_, i) => i + 1); // 30 niveles completos
-
-    let updated = 0;
-
-    for (const language of languages) {
-      await UserLanguageProgress.findOneAndUpdate(
-        { userId, language },
-        {
-          userId,
-          language,
-          completedLevels: allCompletedLevels,
-          completionPercentage: 100,
-          totalPoints: allCompletedLevels.length * POINTS_PER_LEVEL,
-          completedAt: new Date(),
-          lastActivityAt: new Date(),
-        },
-        {
-          upsert: true,
-          returnDocument: 'after',
-          setDefaultsOnInsert: true,
-        }
-      );
-      updated++;
-    }
-
-    return res.json({
-      message: 'Todos los cursos completados',
-      totalCoursesCompleted: updated,
-      totalPoints: (allCompletedLevels.length * POINTS_PER_LEVEL) * languages.length,
-    });
-  } catch (error) {
-    return res.status(500).json({ message: 'No se pudo completar los cursos.' });
-  }
-});
+// DEPRECATED: Testing endpoint - only for development. Commented out for security.
+// router.post('/complete-all-courses/:userId', async (req, res) => {
+//   // Esta ruta se ha comentado para evitar completar cursos accidentalmente en producción.
+//   // Descomenta si necesitas pruebas masivas durante desarrollo.
+// });
 
 // Mapeo de lenguajes a lecciones
 const LANGUAGE_TO_LESSON_MAP = {
