@@ -8,6 +8,7 @@ const http = require('http');
 const authRoutes = require('./routes/auth');
 const { learningRouter, ensureCurriculaClassified, ensureLeaguesSeeded } = require('./routes/learning');
 const { socialRouter, ensureDemoUsersSeeded, initSocketIO } = require('./routes/social');
+const { ensureDemoUserSeeded } = require('./scripts/create-demo-user');
 
 // Cargar variables de entorno
 dotenv.config({ path: '.env.local', quiet: true });
@@ -78,6 +79,7 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     await ensureCurriculaClassified();
     await ensureLeaguesSeeded();
+    await ensureDemoUserSeeded();
     if (String(process.env.SEED_DEMO_USERS || '').toLowerCase() === 'true') {
       await ensureDemoUsersSeeded();
     }

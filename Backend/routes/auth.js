@@ -134,6 +134,8 @@ router.post('/register', async (req, res) => {
     return res.status(201).json({
       message: 'Usuario registrado correctamente.',
       userId: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
       username: newUser.username,
       programmerType: newUser.programmerType,
       learningPath: newUser.learningPath,
@@ -178,6 +180,8 @@ router.post('/login', async (req, res) => {
     return res.json({
       message: 'Login correcto.',
       userId: user._id,
+      fullName: user.fullName,
+      email: user.email,
       username: user.username,
       programmerType: user.programmerType,
       learningPath: user.learningPath,

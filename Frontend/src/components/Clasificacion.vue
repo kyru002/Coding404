@@ -1,9 +1,6 @@
 <template>
   <div class="clasificacion-container">
     <div class="content-area">
-      <h1>{{ t('title') }}</h1>
-      <p class="subtitle">{{ t('subtitle') }}</p>
-
       <div class="scope-tabs">
         <button class="scope-tab" :class="{ active: leaderboardScope === 'global' }" @click="changeScope('global')">{{ t('globalLeague') }}</button>
         <button class="scope-tab" :class="{ active: leaderboardScope === 'friends' }" @click="changeScope('friends')">{{ t('friendsLeague') }}</button>
@@ -138,6 +135,15 @@
             </button>
 
             <button
+              v-if="isFriend(selectedLeaderboardUser)"
+              class="send-friend-request-btn remove-friend-btn"
+              :disabled="isRemovingFriend"
+              @click="removeFriendFromRanking"
+            >
+              {{ isRemovingFriend ? t('sending') : t('removeFriend') }}
+            </button>
+
+            <button
               class="send-friend-request-btn"
               :class="{ following: selectedLeaderboardUser.isFollowing }"
               :disabled="isTogglingFollow"
@@ -258,6 +264,8 @@ export default {
       userSocialListItems: [],
       friendRequestFeedback: '',
       pendingFriendRequests: new Set(),
+      isRemovingFriend: false,
+      friendIds: new Set(),
       followingUserIds: new Set()
     }
   },
@@ -285,6 +293,7 @@ export default {
         this.refreshUiLanguageFromStorage()
         this.fetchLeaderboard()
         this.loadFollowingUsers()
+        this.loadFriendIds()
       }
     }
   },
@@ -328,7 +337,8 @@ export default {
           noUsersInList: 'No hay usuarios para mostrar.',
           sending: 'Enviando...',
           requestPending: 'Solicitud pendiente',
-          sendFriendRequest: 'Enviar solicitud de amistad'
+          sendFriendRequest: 'Enviar solicitud de amistad',
+          removeFriend: 'Eliminar amigo'
         },
         en: {
           title: 'Ranking',
@@ -356,7 +366,8 @@ export default {
           noUsersInList: 'No users to show yet.',
           sending: 'Sending...',
           requestPending: 'Request pending',
-          sendFriendRequest: 'Send friend request'
+          sendFriendRequest: 'Send friend request',
+          removeFriend: 'Remove friend'
         }
       }
 
@@ -401,6 +412,33 @@ export default {
       const rowId = String(leaderboardUser.userId || leaderboardUser._id || '')
       return currentId.length > 0 && currentId === rowId
     },
+    async loadFriendIds() {
+      const userId = this.getCurrentUserId()
+      if (!userId) {
+        this.friendIds = new Set()
+        return
+      }
+
+      try {
+        const response = await fetch(`${this.socialApiBaseUrl}/friends/${userId}`)
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          this.friendIds = new Set()
+          return
+        }
+
+        const ids = Array.isArray(data.friends)
+          ? data.friends.map((friend) => String(friend.userId || friend._id || '')).filter(Boolean)
+          : []
+        this.friendIds = new Set(ids)
+      } catch (error) {
+        this.friendIds = new Set()
+      }
+    },
+    isFriend(leaderboardUser) {
+      const targetId = String(leaderboardUser?.userId || leaderboardUser?._id || '')
+      return Boolean(targetId && this.friendIds?.has(targetId))
+    },
     async openUserProfile(user) {
       this.selectedLeaderboardUser = {
         ...user,
@@ -424,6 +462,7 @@ export default {
       this.userSocialListItems = []
       this.selectedLeaderboardUser = null
       this.isSendingFriendRequest = false
+      this.isRemovingFriend = false
       this.isTogglingFollow = false
       document.body.style.overflow = 'auto'
     },
@@ -480,6 +519,35 @@ export default {
         // noop
       } finally {
         this.isTogglingFollow = false
+      }
+    },
+    async removeFriendFromRanking() {
+      const userId = this.getCurrentUserId()
+      const targetUserId = String(this.selectedLeaderboardUser?.userId || '')
+      if (!userId || !targetUserId || this.isCurrentUser(this.selectedLeaderboardUser) || this.isRemovingFriend) return
+
+      this.isRemovingFriend = true
+      try {
+        const response = await fetch(`${this.socialApiBaseUrl}/friends`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, targetUserId })
+        })
+
+        if (response.ok) {
+          this.friendIds.delete(targetUserId)
+          this.selectedLeaderboardUser = {
+            ...this.selectedLeaderboardUser,
+            isFriend: false
+          }
+          await this.fetchLeaderboard()
+          await this.loadSelectedUserDetails(targetUserId)
+          return
+        }
+      } catch (error) {
+        // noop
+      } finally {
+        this.isRemovingFriend = false
       }
     },
     isPendingFriendRequest(user) {

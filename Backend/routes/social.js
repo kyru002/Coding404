@@ -394,6 +394,7 @@ const formatCommunityPost = (postDoc, viewerUserId = '', viewerIsAdmin = false) 
       description: sanitizeText(post?.project?.description),
       url: sanitizeUrl(post?.project?.url),
       category: sanitizeText(post?.project?.category) || 'Proyectos',
+      tag: sanitizeText(post?.project?.tag) || '',
     },
   };
 };
@@ -861,6 +862,30 @@ const ensureDemoUsersSeeded = async () => {
     });
   }
 
+  const demoUser = await User.findOne({ username: 'demo' });
+  const kyruUser = await User.findOne({ username: 'kyru002' });
+  if (demoUser && kyruUser) {
+    await Friendship.findOneAndUpdate(
+      {
+        $or: [
+          { userId: demoUser._id, friendId: kyruUser._id },
+          { userId: kyruUser._id, friendId: demoUser._id },
+        ],
+      },
+      {
+        userId: demoUser._id,
+        friendId: kyruUser._id,
+        status: 'accepted',
+        requestedAt: new Date('2026-01-15T00:00:00.000Z'),
+        establishedAt: new Date('2026-01-16T00:00:00.000Z'),
+      },
+      {
+        upsert: true,
+        returnDocument: 'after',
+      }
+    );
+  }
+
 };
 
 router.post('/activity/:userId', async (req, res) => {
@@ -997,6 +1022,38 @@ router.get('/friends/:userId', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'No se pudo obtener la lista de amigos.' });
+  }
+});
+
+router.delete('/friends', async (req, res) => {
+  try {
+    const { userId, targetUserId } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ message: 'Datos inválidos.' });
+    }
+
+    const actor = await ensureActiveActor(userId, res, { allowAdmin: false });
+    if (!actor) return;
+
+    if (String(userId) === String(targetUserId)) {
+      return res.status(400).json({ message: 'No puedes eliminarte a ti mismo.' });
+    }
+
+    const result = await Friendship.deleteMany({
+      $or: [
+        { userId, friendId: targetUserId },
+        { userId: targetUserId, friendId: userId },
+      ],
+    });
+
+    if (!result.deletedCount) {
+      return res.status(404).json({ message: 'No existe esa amistad.' });
+    }
+
+    return res.json({ message: 'Amistad eliminada.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'No se pudo eliminar la amistad.' });
   }
 });
 
@@ -1153,6 +1210,7 @@ router.post('/community/posts', async (req, res) => {
       description: sanitizeText(project?.description),
       url: sanitizeUrl(project?.url),
       category: sanitizeText(project?.category) || 'Proyectos',
+      tag: sanitizeText(project?.tag) || 'Git',
     };
 
     const hasProject = Boolean(projectData.title || projectData.url || projectData.description);
@@ -1174,6 +1232,7 @@ router.post('/community/posts', async (req, res) => {
       likes: [],
       comments: [],
       shareCount: 0,
+      tag: hasProject ? projectData.tag : '',
       project: hasProject ? projectData : {},
     });
 

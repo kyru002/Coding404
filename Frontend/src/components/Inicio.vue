@@ -353,14 +353,32 @@
               <div class="terminal-card">
                 <div class="terminal-topbar">
                   <span>{{ currentLanguage === 'HTML' ? 'editor@coding404' : 'terminal@coding404' }}</span>
-                  <span>{{ currentLanguage.toLowerCase() }}</span>
+                  <div class="terminal-topbar-actions">
+                    <button class="presentation-button" @click="showPresentationPalette = !showPresentationPalette">
+                      Presentación
+                    </button>
+                    <span>{{ currentLanguage.toLowerCase() }}</span>
+                  </div>
                 </div>
                 <div class="terminal-body">
-                  <div class="terminal-line">$ {{ t('objective') }}: {{ practiceInstruction }}</div>
+                  <div class="terminal-line" :style="editorPresentationStyle">$ {{ t('objective') }}: {{ practiceInstruction }}</div>
+                  <div v-if="showPresentationPalette" class="presentation-palette">
+                    <button
+                      v-for="color in presentationColors"
+                      :key="color.value"
+                      class="presentation-color-chip"
+                      :class="{ active: editorPresentationColor === color.value }"
+                      :style="{ backgroundColor: color.value }"
+                      :title="color.label"
+                      @click="setPresentationColor(color.value)"
+                    ></button>
+                    <button class="presentation-reset-button" @click="setPresentationColor(defaultPresentationColor)">Restablecer</button>
+                  </div>
                   <div
                     v-for="(line, idx) in terminalOutput"
                     :key="`terminal-${idx}`"
-                    class="terminal-line">
+                    class="terminal-line"
+                    :style="editorPresentationStyle">
                     {{ line }}
                   </div>
                   <!-- Project Tabs Picker -->
@@ -384,12 +402,13 @@
                     </button>
                   </div>
 
-                  <label class="terminal-label">
+                  <label class="terminal-label" :style="editorPresentationStyle">
                     $ {{ currentLanguage === 'HTML' ? (uiLanguage === 'en' ? 'Write your HTML' : 'Escribe tu HTML') : t('writeYourSolution') }}
                   </label>
                   <textarea
                     v-model="currentEditorCode"
                     class="terminal-input"
+                    :style="editorPresentationStyle"
                     :placeholder="`${currentLanguage === 'HTML' ? (uiLanguage === 'en' ? 'Write your HTML here' : 'Escribe tu HTML aquí') : t('writeYourCodeHere')} ${selectedLevel?.isProject ? activeProjectTab : currentLanguage}...`"
                   ></textarea>
                 </div>
@@ -569,6 +588,16 @@ export default {
       generatedTestsCache: {},
       languageRequestId: 0,
       progressRequestId: 0,
+      showPresentationPalette: false,
+      defaultPresentationColor: '#a8eeff',
+      editorPresentationColor: '#a8eeff',
+      presentationColors: [
+        { label: 'Cian', value: '#a8eeff' },
+        { label: 'Blanco', value: '#f7fbff' },
+        { label: 'Verde', value: '#9df3b6' },
+        { label: 'Amarillo', value: '#ffe08a' },
+        { label: 'Rosa', value: '#ffb7df' }
+      ],
       monacoOptions: {
         automaticLayout: true,
         minimap: { enabled: false },
@@ -616,6 +645,12 @@ export default {
     },
     editorLanguageLabel() {
       return this.currentLanguage
+    },
+    editorPresentationStyle() {
+      return {
+        color: this.editorPresentationColor,
+        caretColor: this.editorPresentationColor
+      }
     },
     currentEditorCode: {
       get() {
@@ -1331,6 +1366,15 @@ export default {
       // Recarga el temario activo desde backend en el idioma seleccionado.
       await this.loadLanguage(this.currentLanguage)
       await this.loadProgress(this.currentLanguage)
+    },
+    setPresentationColor(color) {
+      this.editorPresentationColor = color || this.defaultPresentationColor
+      this.showPresentationPalette = false
+      try {
+        localStorage.setItem('inicio-editor-presentation-color', this.editorPresentationColor)
+      } catch (error) {
+        // Ignorar error de persistencia
+      }
     },
     getActiveUserId() {
       return this.user?.userId || this.user?._id || ''
@@ -2638,6 +2682,10 @@ export default {
       if (savedUiLanguage === 'es' || savedUiLanguage === 'en') {
         this.uiLanguage = savedUiLanguage
       }
+      const savedPresentationColor = localStorage.getItem('inicio-editor-presentation-color')
+      if (savedPresentationColor) {
+        this.editorPresentationColor = savedPresentationColor
+      }
     } catch (error) {
       // Ignorar error de restauración
     }
@@ -3509,6 +3557,55 @@ export default {
   color: #a6c8ff;
   font-size: 11px;
   font-family: 'Courier New', monospace;
+}
+
+.terminal-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.presentation-button {
+  border: 1px solid rgba(136, 160, 246, 0.45);
+  background: linear-gradient(180deg, rgba(21, 184, 112, 0.92), rgba(15, 149, 89, 0.92));
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.presentation-palette {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0 2px;
+}
+
+.presentation-color-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.presentation-color-chip.active {
+  border-color: #ffffff;
+  transform: scale(1.06);
+}
+
+.presentation-reset-button {
+  border: 1px solid rgba(136, 160, 246, 0.35);
+  background: rgba(8, 17, 28, 0.85);
+  color: #d8e6ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .terminal-body {

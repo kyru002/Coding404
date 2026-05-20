@@ -8,7 +8,9 @@
     "dev": "powershell -NoProfile -Command \"$pids = @(Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique); if ($pids.Count -gt 0) { Stop-Process -Id $pids -Force -ErrorAction SilentlyContinue }; nodemon server.js\"",
     "seed:community": "node scripts/seed-community-users.js",
     "sync:follows": "node scripts/sync-follows-all-users.js",
-    "assign:avatars": "node scripts/assign-avatars-to-users.js"
+    "assign:avatars": "node scripts/assign-avatars-to-users.js",
+    "db:cleanup-empty": "node scripts/cleanup-empty-collections.js",
+    "db:sync-indexes": "node scripts/sync-model-indexes.js"
   },
   "keywords": [],
   "author": "",

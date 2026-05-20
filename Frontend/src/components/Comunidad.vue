@@ -386,6 +386,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                   {{ isPostExpanded(post.id) ? t('viewLess') : t('viewMore') }}
                 </button>
                 <div v-if="post.project && (post.project.title || post.project.url)" class="post-project-card">
+                  <p v-if="post.project.tag" class="post-project-tag">#{{ post.project.tag }}</p>
                   <p class="post-project-category">{{ post.project.category || t('projects') }}</p>
                   <h5 class="post-project-title">{{ post.project.title }}</h5>
                   <p v-if="post.project.description" class="post-project-description">{{ post.project.description }}</p>
@@ -548,6 +549,15 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                 </button>
 
                 <button
+                  v-if="friendUsernames.has(selectedPostUser.username)"
+                  class="send-friend-request-btn remove-friend-btn"
+                  :disabled="isRemovingPostFriend"
+                  @click="removeFriendFromPostUser"
+                >
+                  {{ isRemovingPostFriend ? t('sending') : t('removeFriend') }}
+                </button>
+
+                <button
                   class="send-friend-request-btn"
                   :class="{ active: selectedPostUser.isFollowing }"
                   :disabled="isTogglingFollow"
@@ -671,6 +681,16 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                 <option value="Proyectos">{{ t('projects') }}</option>
                 <option value="Algoritmos">{{ t('algorithms') }}</option>
                 <option value="Estructuras">{{ t('structures') }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>{{ t('tag') }}</label>
+              <select v-model="projectPostForm.tag" class="form-select">
+                <option value="Git">Git</option>
+                <option value="GitHub">GitHub</option>
+                <option value="GitFlow">GitFlow</option>
+                <option value="Repositorio">Repositorio</option>
               </select>
             </div>
 
@@ -826,6 +846,7 @@ export default {
       },
       projectPostForm: {
         category: 'Proyectos',
+        tag: 'Git',
         title: '',
         description: '',
         url: ''
@@ -847,6 +868,7 @@ export default {
       postUserSocialListTitle: '',
       postUserSocialListItems: [],
       isSendingPostFriendRequest: false,
+      isRemovingPostFriend: false,
       postFriendRequestFeedback: '',
       pendingPostFriendRequests: new Set(),
       friendUsernames: new Set(),
@@ -1017,92 +1039,94 @@ export default {
           back: 'Volver',
           challengeResult: 'Resultado del Desafio',
           waiting: 'En espera',
-          waitingFriend: 'Waiting for your friend',
-          progress: 'Progress',
-          backChallenges: 'Back to challenges',
+          waitingFriend: 'Esperando a tu amigo',
+          progress: 'Progreso',
+          backChallenges: 'Volver a los desafios',
           victory: 'Victoria',
           defeat: 'Derrota',
-          shareVictory: 'Share victory',
-          sharing: 'Sharing...',
-          processing: 'Processing',
-          calculatingResult: 'Calculating result...',
-          statement: 'Statement',
-          run: 'Run',
-          finish: 'Finish',
-          practice: 'Practice',
-          community: 'Community',
+          shareVictory: 'Compartir victoria',
+          sharing: 'Compartiendo...',
+          processing: 'Procesando',
+          calculatingResult: 'Calculando resultado...',
+          statement: 'Enunciado',
+          run: 'Ejecutar',
+          finish: 'Terminar',
+          practice: 'Practica',
+          community: 'Comunidad',
           challengeTitle: 'Desafio de Codigo',
           challengeDesc: 'Elige tu lenguaje de programacion y presiona iniciar para probar tu poder',
-          chooseLanguage: 'Choose language',
-          searchingOpponent: 'Searching opponent...',
+          chooseLanguage: 'Elegir lenguaje',
+          searchingOpponent: 'Buscando oponente...',
           start: 'Iniciar',
-          byCommunity: 'From the Community',
-          upload: '+ Upload',
-          shareAndDownload: 'Share and download projects, algorithms, git and data structures',
-          by: 'by',
-          viewCode: 'View code',
-          delete: 'Delete',
-          adminMode: 'Admin mode: you can moderate posts and ban users.',
-          logout: 'Log out',
-          all: 'All',
-          forYou: 'For You',
-          saved: 'Saved',
-          myPosts: 'My posts',
-          notifications: 'Notifications',
-          noNotifications: 'You have no notifications yet.',
+          byCommunity: 'De la comunidad',
+          upload: '+ Subir',
+          shareAndDownload: 'Comparte y descarga proyectos, algoritmos, git y estructuras de datos',
+          by: 'por',
+          viewCode: 'Ver codigo',
+          delete: 'Eliminar',
+          adminMode: 'Modo administrador: puedes moderar publicaciones y bloquear usuarios.',
+          logout: 'Cerrar sesion',
+          all: 'Todos',
+          forYou: 'Para ti',
+          saved: 'Guardadas',
+          myPosts: 'Mis publicaciones',
+          notifications: 'Notificaciones',
+          noNotifications: 'Aun no tienes notificaciones.',
           whatLearning: 'Que estas aprendiendo hoy?',
-          uploadProject: '+ Upload project',
-          publish: 'Publish',
-          noPosts: 'There are no community posts yet.',
-          beFirst: 'Be the first to share your progress!',
-          viewLess: 'Show less',
-          viewMore: 'Show more...',
-          projects: 'Projects',
-          viewRepo: 'View repository',
-          viewProjects: 'Projects',
-          loadingProjects: 'Loading projects...',
-          projectsFromUser: 'Posts from',
-          noProjectsYet: 'This user has no posts yet.',
-          viewProjectRepo: 'View repository',
+          uploadProject: '+ Subir proyecto',
+          publish: 'Publicar',
+          noPosts: 'Aun no hay publicaciones en la comunidad.',
+          beFirst: 'Se el primero en compartir tu progreso.',
+          viewLess: 'Mostrar menos',
+          viewMore: 'Mostrar mas...',
+          projects: 'Proyectos',
+          viewRepo: 'Ver repositorio',
+          viewProjects: 'Ver proyectos',
+          loadingProjects: 'Cargando proyectos...',
+          projectsFromUser: 'Publicaciones de',
+          noProjectsYet: 'Este usuario aun no tiene publicaciones.',
+          viewProjectRepo: 'Ver repositorio',
           noUsersInList: 'No hay usuarios para mostrar.',
-          save: 'Save',
-          share: 'Share',
-          deletePost: 'Delete post',
-          banUser: 'Ban user',
-          noComments: 'No comments yet.',
-          writeComment: 'Write a comment...',
-          send: 'Send',
-          sending: 'Sending...',
-          points: 'Points',
-          follow: 'Follow',
-          followers: 'Followers',
-          following: 'Following',
-          certificates: 'Certificates',
-          unfollow: 'Unfollow',
-          pendingRequest: 'Request pending',
-          sendFriendRequest: 'Send friend request',
-          uploadToCommunity: 'Upload to Community',
-          contentType: 'Content type',
-          algorithms: 'Algorithms',
-          structures: 'Data Structures',
-          title: 'Title',
-          uploadTitlePlaceholder: 'Ex: JWT Login System',
-          description: 'Description',
-          uploadDescriptionPlaceholder: 'Describe your project...',
-          repositoryLink: 'Repository link (GitHub, GitLab, etc.)',
-          uploadContent: 'Upload content',
-          publishProjectTitle: 'Publish Project',
-          category: 'Category',
-          projectTitleLabel: 'Project title',
-          projectTitlePlaceholder: 'Ex: API de tareas con Node.js',
-          projectDescriptionPlaceholder: 'What does the project include?',
-          repositoryLinkOnly: 'Repository link',
-          publishProjectButton: 'Publish project',
-          navHome: 'Home',
-          navCommunity: 'Community',
-          navRanking: 'Ranking',
-          navLessons: 'Lessons',
-          navProfile: 'Profile',
+          save: 'Guardar',
+          share: 'Compartir',
+          deletePost: 'Eliminar publicacion',
+          banUser: 'Bloquear usuario',
+          noComments: 'Aun no hay comentarios.',
+          writeComment: 'Escribe un comentario...',
+          send: 'Enviar',
+          sending: 'Enviando...',
+          points: 'Puntos',
+          follow: 'Seguir',
+          followers: 'Seguidores',
+          following: 'Siguiendo',
+          certificates: 'Certificados',
+          unfollow: 'Dejar de seguir',
+          pendingRequest: 'Solicitud pendiente',
+          sendFriendRequest: 'Enviar solicitud de amistad',
+          removeFriend: 'Eliminar amigo',
+          uploadToCommunity: 'Subir a la comunidad',
+          contentType: 'Tipo de contenido',
+          algorithms: 'Algoritmos',
+          structures: 'Estructuras de datos',
+          tag: 'Etiqueta',
+          title: 'Titulo',
+          uploadTitlePlaceholder: 'Ej: Sistema de login con JWT',
+          description: 'Descripcion',
+          uploadDescriptionPlaceholder: 'Describe tu proyecto...',
+          repositoryLink: 'Enlace del repositorio (GitHub, GitLab, etc.)',
+          uploadContent: 'Subir contenido',
+          publishProjectTitle: 'Publicar proyecto',
+          category: 'Categoria',
+          projectTitleLabel: 'Titulo del proyecto',
+          projectTitlePlaceholder: 'Ej: API de tareas con Node.js',
+          projectDescriptionPlaceholder: 'Que incluye el proyecto?',
+          repositoryLinkOnly: 'Enlace del repositorio',
+          publishProjectButton: 'Publicar proyecto',
+          navHome: 'Inicio',
+          navCommunity: 'Comunidad',
+          navRanking: 'Clasificacion',
+          navLessons: 'Lecciones',
+          navProfile: 'Perfil',
           htmlCssStatement: 'Replica la pagina web solo usando html y css.'
           ,javaStatement: 'Replica este menu y hazlo funcional usando solo java.'
           ,pythonStatement1: 'Crea 3 a 5 coches con nombres distintos.'
@@ -1188,10 +1212,12 @@ export default {
           unfollow: 'Unfollow',
           pendingRequest: 'Request pending',
           sendFriendRequest: 'Send friend request',
+          removeFriend: 'Remove friend',
           uploadToCommunity: 'Upload to Community',
           contentType: 'Content type',
           algorithms: 'Algorithms',
           structures: 'Data Structures',
+          tag: 'Tag',
           title: 'Title',
           uploadTitlePlaceholder: 'Ex: JWT Login System',
           description: 'Description',
@@ -2598,6 +2624,7 @@ export default {
       this.postUserSocialListTitle = ''
       this.postUserSocialListItems = []
       this.isSendingPostFriendRequest = false
+      this.isRemovingPostFriend = false
       this.postFriendRequestFeedback = ''
       document.body.style.overflow = 'auto'
     },
@@ -2634,6 +2661,37 @@ export default {
         this.postFriendRequestFeedback = 'Error de conexión al enviar la solicitud.'
       } finally {
         this.isSendingPostFriendRequest = false
+      }
+    },
+    async removeFriendFromPostUser() {
+      const userId = this.getCurrentUserId()
+      const targetUserId = String(this.selectedPostUser?.userId || '')
+      if (!userId || !targetUserId || this.isCurrentPostUser || this.isRemovingPostFriend) return
+
+      this.isRemovingPostFriend = true
+      try {
+        const response = await fetch(`${this.socialApiBaseUrl}/friends`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId, targetUserId })
+        })
+
+        if (response.ok) {
+          this.friendUsernames.delete(String(this.selectedPostUser.username || ''))
+          this.pendingPostFriendRequests.delete(String(this.selectedPostUser.username || ''))
+          this.postFriendRequestFeedback = 'Amigo eliminado.'
+          await this.loadFriendUsernames()
+          return
+        }
+
+        const data = await response.json().catch(() => ({}))
+        this.postFriendRequestFeedback = data?.message || 'No se pudo eliminar la amistad.'
+      } catch (error) {
+        this.postFriendRequestFeedback = 'Error de conexión al eliminar la amistad.'
+      } finally {
+        this.isRemovingPostFriend = false
       }
     },
     async loadRepositoryItems() {
@@ -3060,6 +3118,7 @@ export default {
       this.showProjectPostModal = false
       this.projectPostForm = {
         category: 'Proyectos',
+        tag: 'Git',
         title: '',
         description: '',
         url: ''
@@ -3092,7 +3151,8 @@ export default {
               title,
               description,
               url,
-              category: this.projectPostForm.category || 'Proyectos'
+              category: this.projectPostForm.category || 'Proyectos',
+              tag: this.projectPostForm.tag || 'Git'
             }
           })
         })

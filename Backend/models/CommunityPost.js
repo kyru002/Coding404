@@ -47,6 +47,12 @@ const projectSchema = new mongoose.Schema(
       trim: true,
       maxlength: 60,
     },
+    tag: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 60,
+    },
   },
   { _id: false }
 );

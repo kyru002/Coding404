@@ -50,6 +50,20 @@ const t = (key) => {
   return pack[key] || key
 }
 
+const normalizeStoredUser = (user) => {
+  if (!user || typeof user !== 'object') return null
+
+  const userId = String(user.userId || user._id || '').trim()
+  if (!userId) return null
+
+  return {
+    ...user,
+    userId,
+    _id: user._id || userId,
+    isAdmin: Boolean(user.isAdmin || String(user.role || 'user') === 'admin'),
+  }
+}
+
 const refreshPendingRequestsCount = async (user = currentUser.value) => {
   const userId = user?.userId || user?._id
   if (!userId) {
@@ -82,19 +96,42 @@ const showRegister = () => {
 }
 
 const showHome = (user = null) => {
-  if (user) {
-    currentUser.value = user
-    refreshPendingRequestsCount(user)
-    startBattleInvitePolling(user)
+  const normalizedUser = normalizeStoredUser(user)
+
+  if (normalizedUser) {
+    currentUser.value = normalizedUser
+    refreshPendingRequestsCount(normalizedUser)
+    startBattleInvitePolling(normalizedUser)
     // Guardar sesión para persistencia tras recargar
     try {
-      localStorage.setItem('currentUser', JSON.stringify(user))
+      localStorage.setItem('currentUser', JSON.stringify(normalizedUser))
     } catch (error) {
       console.error('Error saving session:', error)
     }
+
+    if (normalizedUser.userId) {
+      fetch(`${API_BASE_URL}/api/auth/user/${normalizedUser.userId}`)
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => {
+          if (data?.user) {
+            const hydratedUser = normalizeStoredUser(data.user)
+            if (!hydratedUser) return
+
+            currentUser.value = hydratedUser
+            try {
+              localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
+            } catch (error) {
+              console.error('Error updating session:', error)
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('Error hydrating user session:', error)
+        })
+    }
   }
 
-  if (user?.isAdmin) {
+  if (normalizedUser?.isAdmin) {
     activeSection.value = 'comunidad'
   }
 
@@ -241,19 +278,46 @@ const acceptBattleInvite = async () => {
 }
 
 const handleUserUpdated = (updatedUser) => {
-  currentUser.value = updatedUser
-  refreshPendingRequestsCount(updatedUser)
+  const normalizedUser = normalizeStoredUser(updatedUser)
+  currentUser.value = normalizedUser || updatedUser
+  refreshPendingRequestsCount(normalizedUser || updatedUser)
+
+  if (normalizedUser?.userId) {
+    fetch(`${API_BASE_URL}/api/auth/user/${normalizedUser.userId}`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (data?.user) {
+          const hydratedUser = normalizeStoredUser(data.user)
+          if (!hydratedUser) return
+
+          currentUser.value = hydratedUser
+          try {
+            localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
+          } catch (error) {
+            console.error('Error updating hydrated user session:', error)
+          }
+        }
+      })
+      .catch((error) => {
+        console.error('Error hydrating updated user:', error)
+      })
+  }
 }
 
 const handleLessonCompleted = async () => {
   // Recargar el usuario desde el servidor para obtener el learningPath actualizado
-  if (currentUser.value?.userId) {
+  const normalizedUser = normalizeStoredUser(currentUser.value)
+  if (normalizedUser?.userId) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/user/${currentUser.value.userId}`)
+      const response = await fetch(`${API_BASE_URL}/api/auth/user/${normalizedUser.userId}`)
       if (response.ok) {
         const data = await response.json()
         if (data.user) {
-          currentUser.value = data.user
+          const hydratedUser = normalizeStoredUser(data.user)
+          if (hydratedUser) {
+            currentUser.value = hydratedUser
+            localStorage.setItem('currentUser', JSON.stringify(hydratedUser))
+          }
         }
       }
     } catch (error) {
@@ -278,8 +342,9 @@ const restoreSessionFromStorage = () => {
     const stored = localStorage.getItem('currentUser')
     if (stored) {
       const user = JSON.parse(stored)
-      if (user?.userId) {
-        showHome(user)
+      const normalizedUser = normalizeStoredUser(user)
+      if (normalizedUser) {
+        showHome(normalizedUser)
         return true
       }
     }
