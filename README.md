@@ -48,9 +48,23 @@ Esto inicia:
 
 
 ## Suggested Deploy
-- Frontend: Vercel o Netlify
+- Frontend: GitHub Pages, Vercel o Netlify
 - Backend: Render, Railway o Fly.io
 - MongoDB: Atlas
+
+### GitHub Pages
+Si quieres usar GitHub Pages, no actives la carpeta del repositorio como fuente. Debes publicar el build de Vite (`Frontend/dist`).
+
+Pasos:
+1. Ve a Settings > Pages en GitHub.
+2. En Source, elige GitHub Actions.
+3. Haz push a la rama `main` o `feature/demo-full-progress`.
+4. El workflow `.github/workflows/deploy-pages.yml` compila `Frontend` y publica `Frontend/dist`.
+
+Notas:
+- La app está configurada con base `/Coding404/` para Pages.
+- Si cambias el nombre del repo, actualiza `base` en `Frontend/vite.config.js`.
+- El backend debe estar desplegado aparte y `VITE_API_URL` debe apuntar a su URL pública.
 
 ## License
 Este proyecto usa licencia MIT. Ver LICENSE.
