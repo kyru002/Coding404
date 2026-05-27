@@ -24,7 +24,6 @@ const courseSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
     createdAtCourse: {
       type: Date,
@@ -35,5 +34,7 @@ const courseSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+courseSchema.index({ language: 1, createdAtCourse: -1 }); // Búsqueda por lenguaje ordenada por fecha
 
 module.exports = mongoose.model('Course', courseSchema);

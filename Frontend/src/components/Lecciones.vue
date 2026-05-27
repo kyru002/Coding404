@@ -3,8 +3,6 @@
     <div class="content-area">
       <!-- Vista de cursos -->
       <template v-if="!selectedCourseId">
-        <h2 class="section-title">{{ t('professionalDevelopment') }}</h2>
-
         <div class="courses-grid">
           <article
             v-for="course in coursesWithState"
@@ -225,6 +223,7 @@ export default {
       selectedTheoryLesson: null,
       expandedLanguages: {},
       languageTheoryState: {},
+      curriculaPreloadPromise: null,
       fallbackLearningPath: {
         preferredTrack: 'Front-end',
         recommendedCourse: 'frontend',
@@ -316,6 +315,20 @@ export default {
     learningPath() {
       return this.user?.learningPath || this.fallbackLearningPath
     },
+    isDemoUser() {
+      const username = String(this.user?.username || '').trim().toLowerCase()
+      const email = String(this.user?.email || '').trim().toLowerCase()
+      if (username === 'demo' || email === 'demo@coding404.dev') {
+        return true
+      }
+
+      const startedCourses = Array.isArray(this.learningPath?.startedCourses) ? this.learningPath.startedCourses : []
+      const completedLessons = Array.isArray(this.learningPath?.completedLessons) ? this.learningPath.completedLessons : []
+      const hasFullTrackCoverage = ['frontend', 'backend', 'database'].every((course) => startedCourses.includes(course))
+      const hasManyCompletedLessons = completedLessons.length >= 25
+
+      return hasFullTrackCoverage && hasManyCompletedLessons
+    },
     coursesWithState() {
       const startedCourses = new Set(this.learningPath.startedCourses || [])
       const startedLessons = new Set(this.learningPath.startedLessons || [])
@@ -359,7 +372,7 @@ export default {
         lessons: course.lessons.map((lesson) => ({
           ...lesson,
           started: startedLessons.has(lesson.id),
-          completed: allCompletedLessons.has(lesson.id)
+          completed: this.isDemoUser || allCompletedLessons.has(lesson.id)
         }))
       }))
     },
@@ -551,6 +564,18 @@ export default {
       }
 
       const course = this.courseCatalog.find((item) => item.id === courseId)
+
+      if (this.isDemoUser && Array.isArray(course?.techs) && course.techs.length > 0) {
+        const expanded = {}
+        course.techs.forEach((tech) => {
+          expanded[tech] = true
+        })
+        this.expandedLanguages = expanded
+
+        await Promise.all(course.techs.map((tech) => this.ensureLanguageTheory(tech)))
+        return
+      }
+
       if (course?.techs?.length === 1) {
         const singleLanguage = course.techs[0]
         this.expandedLanguages = {
@@ -586,7 +611,7 @@ export default {
 
       return state.levels.map((level) => ({
         ...level,
-        completed: level.id <= state.completedCount
+        completed: this.isDemoUser || level.id <= state.completedCount
       }))
     },
     getVisibleLevelsByLanguage(language) {
@@ -618,6 +643,8 @@ export default {
       }))
     },
     isTheoryLevelUnlocked(language, levelId) {
+      if (this.isDemoUser) return true
+
       const state = this.getTheoryState(language)
       if (!state) return true
       return levelId <= (state.completedCount + 1)
@@ -824,12 +851,12 @@ export default {
       }
 
       try {
-        const [curriculumResponse, progressResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/learning/curricula/${encodeURIComponent(normalized)}?lang=${this.uiLanguage}`),
-          this.user?.userId
-            ? fetch(`${API_BASE_URL}/api/learning/progress/${this.user.userId}/${encodeURIComponent(normalized)}`)
-            : Promise.resolve(null)
-        ])
+        const curriculumPromise = fetch(`${API_BASE_URL}/api/learning/curricula/${encodeURIComponent(normalized)}?lang=${this.uiLanguage}`)
+        const progressPromise = this.isDemoUser || !this.user?.userId
+          ? Promise.resolve(null)
+          : fetch(`${API_BASE_URL}/api/learning/progress/${this.user.userId}/${encodeURIComponent(normalized)}`)
+
+        const [curriculumResponse, progressResponse] = await Promise.all([curriculumPromise, progressPromise])
 
         let levels = []
         if (curriculumResponse?.ok) {
@@ -842,6 +869,10 @@ export default {
           const progressData = await progressResponse.json()
           const completedLevels = progressData?.progress?.completedLevels || []
           completedCount = Array.isArray(completedLevels) ? completedLevels.length : 0
+        }
+
+        if (this.isDemoUser) {
+          completedCount = levels.length
         }
 
         this.languageTheoryState = {
@@ -1010,6 +1041,20 @@ export default {
       } catch (error) {
         console.error('Error cargando learning path del servidor:', error)
       }
+    },
+    async preloadAllCurricula() {
+      if (this.curriculaPreloadPromise) {
+        return this.curriculaPreloadPromise
+      }
+
+      const languages = [...new Set(this.courseCatalog.flatMap((course) => course.techs || []))]
+
+      this.curriculaPreloadPromise = Promise.all(languages.map((language) => this.ensureLanguageTheory(language)))
+        .catch((error) => {
+          console.error('Error precargando currículos:', error)
+        })
+
+      return this.curriculaPreloadPromise
     }
   },
   watch: {
@@ -1018,6 +1063,7 @@ export default {
         if (newSection === 'lecciones') {
           this.refreshUiLanguageFromStorage()
           this.reloadExpandedTheorySections()
+          this.preloadAllCurricula()
         }
       }
     },
@@ -1026,6 +1072,16 @@ export default {
         if (newUser?.userId) {
           // Cuando cambia el usuario, recargar su learning path del servidor
           this.loadLearningPathFromServer()
+
+          if (this.isDemoUser && this.selectedCourse?.techs?.length > 0) {
+            const expanded = {}
+            this.selectedCourse.techs.forEach((tech) => {
+              expanded[tech] = true
+            })
+            this.expandedLanguages = expanded
+
+            Promise.all(this.selectedCourse.techs.map((tech) => this.ensureLanguageTheory(tech)))
+          }
         }
       },
       deep: true
@@ -1034,6 +1090,7 @@ export default {
   mounted() {
     this.refreshUiLanguageFromStorage()
     window.addEventListener('storage', this.handleStorageUpdate)
+    this.preloadAllCurricula()
 
     // Al montar el componente, cargar el learning path del servidor
     if (this.user?.userId) {

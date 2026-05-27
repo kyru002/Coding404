@@ -353,14 +353,32 @@
               <div class="terminal-card">
                 <div class="terminal-topbar">
                   <span>{{ currentLanguage === 'HTML' ? 'editor@coding404' : 'terminal@coding404' }}</span>
-                  <span>{{ currentLanguage.toLowerCase() }}</span>
+                  <div class="terminal-topbar-actions">
+                    <button class="presentation-button" @click="showPresentationPalette = !showPresentationPalette">
+                      Presentación
+                    </button>
+                    <span>{{ currentLanguage.toLowerCase() }}</span>
+                  </div>
                 </div>
                 <div class="terminal-body">
-                  <div class="terminal-line">$ {{ t('objective') }}: {{ practiceInstruction }}</div>
+                  <div class="terminal-line" :style="editorPresentationStyle">$ {{ t('objective') }}: {{ practiceInstruction }}</div>
+                  <div v-if="showPresentationPalette" class="presentation-palette">
+                    <button
+                      v-for="color in presentationColors"
+                      :key="color.value"
+                      class="presentation-color-chip"
+                      :class="{ active: editorPresentationColor === color.value }"
+                      :style="{ backgroundColor: color.value }"
+                      :title="color.label"
+                      @click="setPresentationColor(color.value)"
+                    ></button>
+                    <button class="presentation-reset-button" @click="setPresentationColor(defaultPresentationColor)">Restablecer</button>
+                  </div>
                   <div
                     v-for="(line, idx) in terminalOutput"
                     :key="`terminal-${idx}`"
-                    class="terminal-line">
+                    class="terminal-line"
+                    :style="editorPresentationStyle">
                     {{ line }}
                   </div>
                   <!-- Project Tabs Picker -->
@@ -384,12 +402,13 @@
                     </button>
                   </div>
 
-                  <label class="terminal-label">
+                  <label class="terminal-label" :style="editorPresentationStyle">
                     $ {{ currentLanguage === 'HTML' ? (uiLanguage === 'en' ? 'Write your HTML' : 'Escribe tu HTML') : t('writeYourSolution') }}
                   </label>
                   <textarea
                     v-model="currentEditorCode"
                     class="terminal-input"
+                    :style="editorPresentationStyle"
                     :placeholder="`${currentLanguage === 'HTML' ? (uiLanguage === 'en' ? 'Write your HTML here' : 'Escribe tu HTML aquí') : t('writeYourCodeHere')} ${selectedLevel?.isProject ? activeProjectTab : currentLanguage}...`"
                   ></textarea>
                 </div>
@@ -489,8 +508,6 @@
 <script>
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { API_BASE_URL } from '../config/api'
-import htmlLocalData from '../data/languages/html.json'
-import { cssData, javascriptData, vueData, sqlData, pythonData, javaData, phpData, nodeData } from '../data/languages/courses'
 
 export default {
   name: 'Inicio',
@@ -571,6 +588,16 @@ export default {
       generatedTestsCache: {},
       languageRequestId: 0,
       progressRequestId: 0,
+      showPresentationPalette: false,
+      defaultPresentationColor: '#a8eeff',
+      editorPresentationColor: '#a8eeff',
+      presentationColors: [
+        { label: 'Cian', value: '#a8eeff' },
+        { label: 'Blanco', value: '#f7fbff' },
+        { label: 'Verde', value: '#9df3b6' },
+        { label: 'Amarillo', value: '#ffe08a' },
+        { label: 'Rosa', value: '#ffb7df' }
+      ],
       monacoOptions: {
         automaticLayout: true,
         minimap: { enabled: false },
@@ -599,16 +626,7 @@ export default {
   },
   computed: {
     displayLevels() {
-      const remoteLevels = Array.isArray(this.currentLanguageData?.levels)
-        ? this.currentLanguageData.levels
-        : []
-
-      if (remoteLevels.length > 0) {
-        return remoteLevels
-      }
-
-      const localFallback = this.getLocalCurriculumFallback(this.currentLanguage)
-      return Array.isArray(localFallback?.levels) ? localFallback.levels : []
+      return Array.isArray(this.currentLanguageData?.levels) ? this.currentLanguageData.levels : []
     },
     totalLevels() {
       return this.displayLevels.length || 30
@@ -627,6 +645,12 @@ export default {
     },
     editorLanguageLabel() {
       return this.currentLanguage
+    },
+    editorPresentationStyle() {
+      return {
+        color: this.editorPresentationColor,
+        caretColor: this.editorPresentationColor
+      }
     },
     currentEditorCode: {
       get() {
@@ -1336,12 +1360,21 @@ export default {
       try {
         localStorage.setItem('inicio-ui-language', this.uiLanguage)
       } catch (error) {
-        console.warn('No se pudo persistir el idioma de interfaz', error)
+        // Ignorar error de persistencia
       }
 
       // Recarga el temario activo desde backend en el idioma seleccionado.
       await this.loadLanguage(this.currentLanguage)
       await this.loadProgress(this.currentLanguage)
+    },
+    setPresentationColor(color) {
+      this.editorPresentationColor = color || this.defaultPresentationColor
+      this.showPresentationPalette = false
+      try {
+        localStorage.setItem('inicio-editor-presentation-color', this.editorPresentationColor)
+      } catch (error) {
+        // Ignorar error de persistencia
+      }
     },
     getActiveUserId() {
       return this.user?.userId || this.user?._id || ''
@@ -1357,7 +1390,7 @@ export default {
       try {
         localStorage.setItem(key, String(languageName))
       } catch (error) {
-        console.warn('No se pudo persistir el idioma seleccionado', error)
+        // Ignorar error de persistencia
       }
     },
     restoreCurrentLanguageSelection() {
@@ -1378,7 +1411,6 @@ export default {
 
         return true
       } catch (error) {
-        console.warn('No se pudo restaurar el idioma seleccionado', error)
         return false
       }
     },
@@ -1422,9 +1454,6 @@ export default {
         this.currentLanguage = mapping.language
         this.selectedLearningPath = mapping.path
         this.persistCurrentLanguageSelection(mapping.language)
-        console.log(`Programmer type '${programmerType}' mapped to language '${mapping.language}'`)
-      } else {
-        console.warn(`Programmer type '${programmerType}' not found in typeMap. Using default (HTML).`)
       }
     },
     async selectLearningPath(pathId) {
@@ -1505,58 +1534,6 @@ export default {
 
       return map[languageName] || languageName
     },
-    getLocalCurriculumFallback(languageName = this.currentLanguage) {
-      const backendLanguage = this.getBackendLanguage(languageName)
-      const key = String(backendLanguage || '').toLowerCase()
-
-      const localMap = {
-        html: htmlLocalData,
-        css: cssData,
-        javascript: javascriptData,
-        'node.js': nodeData,
-        node: nodeData,
-        sql: sqlData,
-        python: pythonData,
-        java: javaData,
-        php: phpData,
-        vue: vueData
-      }
-
-      const candidate = localMap[key]
-      if (candidate?.levels?.length) {
-        return {
-          ...candidate,
-          language: languageName,
-          levels: candidate.levels.map((level, index) => ({
-            ...level,
-            id: Number(level.id || index + 1)
-          }))
-        }
-      }
-
-      return {
-        language: languageName,
-        description: `Ruta base de ${languageName}`,
-        levels: Array.from({ length: 30 }, (_, index) => {
-          const id = index + 1
-          const isExam = id % 10 === 0
-          return {
-            id,
-            name: `${languageName} · Nivel ${id}`,
-            description: `Nivel ${id} de ${languageName}`,
-            difficulty: id <= 10 ? 'fácil' : id <= 20 ? 'medio' : 'difícil',
-            points: id <= 10 ? 75 : id <= 20 ? 100 : 125,
-            isExam,
-            content: {
-              title: `${languageName} · Nivel ${id}`,
-              theory: [`Introducción al nivel ${id} de ${languageName}.`, 'Aplica la teoría en una práctica corta.'],
-              example: ''
-            },
-            tests: []
-          }
-        })
-      }
-    },
     getShortLevelTitle(level) {
       const rawName = String(level?.name || level?.content?.title || '').trim()
       if (!rawName) return `Nivel ${level?.id || ''}`.trim()
@@ -1569,7 +1546,6 @@ export default {
       const requestId = ++this.languageRequestId
 
       try {
-        console.log(`Loading language: ${languageName}`)
         const backendLanguage = this.getBackendLanguage(languageName)
         const encodedLanguage = encodeURIComponent(backendLanguage)
         const response = await fetch(`${this.apiBaseUrl}/curricula/${encodedLanguage}?lang=${this.uiLanguage}`)
@@ -1595,20 +1571,16 @@ export default {
           ...data.curriculum,
           language: languageName
         }
-        console.log(`Language '${languageName}' loaded successfully. Levels: ${data.curriculum.levels?.length || 0}`)
       } catch (error) {
         if (requestId !== this.languageRequestId) {
           return
         }
 
-        console.error(`Error loading language '${languageName}':`, error.message)
-        const fallbackCurriculum = this.getLocalCurriculumFallback(languageName)
-        this.currentLanguageData = fallbackCurriculum
-        console.warn(`Fallback local curriculum loaded for '${languageName}'. Levels: ${fallbackCurriculum.levels?.length || 0}`)
+        this.currentLanguageData = null
+        this.errorMessage = error?.message || `No se pudo cargar el temario de ${languageName}`
       }
     },
     async handleNavigateSection(section) {
-      console.log(`Navegando a sección: ${section}`)
       await this.saveProgress() // Guardar progreso ANTES de cambiar de sección
       this.$emit('change-section', section)
     },
@@ -1617,7 +1589,6 @@ export default {
       this.currentLanguage = language.name
       this.persistCurrentLanguageSelection(language.name)
       this.selectedLevel = null
-      console.log(`Switched to language: ${language.name}`)
       await this.loadLanguage(language.name)
       await this.loadProgress(language.name)
       this.showLanguageModal = false
@@ -2392,7 +2363,6 @@ export default {
         }
         this.closeLevel()
       } else {
-        // Pasar a la siguiente prueba
         this.currentTestNumber++
         this.resetQuestionAndPuzzleState()
       }
@@ -2419,19 +2389,9 @@ export default {
         const data = await response.json()
         const progressData = data.progress || data
         const completedCount = progressData.completedLevels?.length || 0
-        const LEVELS_PER_LANGUAGE = 30  // Total de niveles en cualquier lenguaje
-        const POINTS_PER_LEVEL = 2
+        const LEVELS_PER_LANGUAGE = 30
 
-        console.log(
-          `📊 ${this.currentLanguage}: ${completedCount}/${LEVELS_PER_LANGUAGE} niveles completados`
-        )
-
-        // Solo marcar como completada si se completaron TODOS los 30 niveles
         if (completedCount === LEVELS_PER_LANGUAGE && completedCount > 0) {
-          // El usuario completó todos los niveles de este lenguaje
-          console.log(
-            `🏆 ¡${this.currentLanguage} completado! ${completedCount}/${LEVELS_PER_LANGUAGE} niveles`
-          )
           await this.notifyLessonCompletion(this.getBackendLanguage())
         }
       } catch (error) {
@@ -2457,7 +2417,6 @@ export default {
 
         if (response.ok) {
           const data = await response.json()
-          console.log(`✅ Lección "${data.lessonId}" marcada como completada`)
           // Emitir evento para que otros componentes se actualicen
           this.$emit('lesson-completed', data.lessonId)
         }
@@ -2468,7 +2427,6 @@ export default {
     async saveProgress() {
       const userId = this.getActiveUserId()
       if (!userId) {
-        console.warn('⚠️ Usuario no identificado, no se puede guardar progreso')
         return
       }
 
@@ -2487,18 +2445,15 @@ export default {
         })
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          console.error(`❌ Error guardando progreso: ${response.status}`, errorData)
           return
         }
 
         const data = await response.json()
-        console.log(`✅ Progreso guardado para ${this.currentLanguage}:`, data.progress)
 
         // Después de guardar el progreso, verifica si se completó el lenguaje
         await this.checkLanguageCompletion()
       } catch (error) {
-        console.error('❌ No se pudo guardar el progreso en servidor:', error)
+        // Ignorar error de guardado
       }
     },
     async loadProgress(languageName = this.currentLanguage) {
@@ -2533,7 +2488,6 @@ export default {
                 }
 
         if (!data?.progress) {
-          console.warn('⚠️ No hay progreso en BD, empezando desde cero')
           this.completedLevels = []
           this.totalPoints = 0
           return
@@ -2541,17 +2495,11 @@ export default {
 
         this.completedLevels = Array.isArray(data.progress.completedLevels) ? data.progress.completedLevels : []
         this.totalPoints = Number(data.progress.totalPoints || 0)
-        
-        console.log(`✅ Progreso cargado para ${languageName}:`, {
-          completedLevels: this.completedLevels,
-          totalPoints: this.totalPoints
-        })
       } catch (error) {
         if (requestId !== this.progressRequestId) {
           return
         }
 
-        console.error('❌ No se pudo cargar progreso desde servidor:', error)
         this.completedLevels = []
         this.totalPoints = 0
       }
@@ -2734,8 +2682,12 @@ export default {
       if (savedUiLanguage === 'es' || savedUiLanguage === 'en') {
         this.uiLanguage = savedUiLanguage
       }
+      const savedPresentationColor = localStorage.getItem('inicio-editor-presentation-color')
+      if (savedPresentationColor) {
+        this.editorPresentationColor = savedPresentationColor
+      }
     } catch (error) {
-      console.warn('No se pudo restaurar el idioma de interfaz', error)
+      // Ignorar error de restauración
     }
 
     const initialUserId = this.getActiveUserId()
@@ -3605,6 +3557,55 @@ export default {
   color: #a6c8ff;
   font-size: 11px;
   font-family: 'Courier New', monospace;
+}
+
+.terminal-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.presentation-button {
+  border: 1px solid rgba(136, 160, 246, 0.45);
+  background: linear-gradient(180deg, rgba(21, 184, 112, 0.92), rgba(15, 149, 89, 0.92));
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.presentation-palette {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 0 2px;
+}
+
+.presentation-color-chip {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.presentation-color-chip.active {
+  border-color: #ffffff;
+  transform: scale(1.06);
+}
+
+.presentation-reset-button {
+  border: 1px solid rgba(136, 160, 246, 0.35);
+  background: rgba(8, 17, 28, 0.85);
+  color: #d8e6ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
 }
 
 .terminal-body {

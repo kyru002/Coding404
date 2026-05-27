@@ -1,11 +1,14 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const http = require('http');
 const authRoutes = require('./routes/auth');
 const { learningRouter, ensureCurriculaClassified, ensureLeaguesSeeded } = require('./routes/learning');
 const { socialRouter, ensureDemoUsersSeeded, initSocketIO } = require('./routes/social');
+const { ensureDemoUserSeeded } = require('./scripts/create-demo-user');
 
 // Cargar variables de entorno
 dotenv.config({ path: '.env.local', quiet: true });
@@ -16,10 +19,41 @@ const server = http.createServer(app);
 
 const isDatabaseReady = () => mongoose.connection.readyState === 1;
 
+// Caché simple en memoria para currículum (24 horas)
+const curriculumCache = new Map();
+const CURRICULUM_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas
+
 // Middlewares
 app.use(cors());
+app.use(compression()); // Compresión gzip automática
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting: 100 requests por 15 minutos por IP
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5000,
+  message: 'Demasiadas solicitudes. Intenta de nuevo más tarde.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting más estricto para endpoints críticos (login, progreso)
+const strictLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  message: 'Demasiadas solicitudes a este endpoint. Intenta de nuevo más tarde.',
+  skipSuccessfulRequests: false,
+});
+
+// Aplicar rate limiting global solo a operaciones no-GET para no bloquear la SPA con muchos fetch de lectura
+app.use('/api/', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+
+  return limiter(req, res, next);
+});
 
 // Ruta de prueba
 app.get('/', (req, res) => {
@@ -34,8 +68,8 @@ app.use('/api', (req, res, next) => {
   return next();
 });
 
-// Rutas de autenticacion
-app.use('/api/auth', authRoutes);
+// Rutas de autenticacion con rate limiting estricto
+app.use('/api/auth', strictLimiter, authRoutes);
 app.use('/api/learning', learningRouter);
 app.use('/api/social', socialRouter);
 
@@ -45,6 +79,7 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     await ensureCurriculaClassified();
     await ensureLeaguesSeeded();
+    await ensureDemoUserSeeded();
     if (String(process.env.SEED_DEMO_USERS || '').toLowerCase() === 'true') {
       await ensureDemoUsersSeeded();
     }
@@ -57,15 +92,17 @@ const connectDB = async () => {
 const startServer = async () => {
   initSocketIO(server);
 
+  try {
+    await connectDB();
+    console.log(`✅ MongoDB conectado (${mongoose.connection.host}/${mongoose.connection.name})`);
+  } catch (error) {
+    console.error('❌ Error al conectar con MongoDB:', error.message);
+    process.exit(1);
+  }
+
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ Backend listo en http://localhost:${PORT} (DB + temarios ES/EN + ligas)`);
   });
-
-  try {
-    await connectDB();
-  } catch (error) {
-    console.error('❌ Error al inicializar backend:', error.message);
-  }
 };
 
 startServer();

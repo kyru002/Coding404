@@ -12,6 +12,14 @@ dotenv.config({ path: '.env.local' });
 
 const LEVELS_PER_LANGUAGE = 30;
 const POINTS_PER_LEVEL = 2;
+
+const getRequiredEnv = (name) => {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    throw new Error(`Falta ${name} en .env.local`);
+  }
+  return value;
+};
 const LANGUAGES = ['HTML', 'CSS', 'JavaScript', 'Node.js', 'Python', 'SQL'];
 
 const seedUsers = [
@@ -145,7 +153,8 @@ function randomDateWithinDays(daysBack) {
 async function run() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    const passwordHash = await bcrypt.hash('Test@1234', 10);
+    const seedPassword = getRequiredEnv('SEED_DEFAULT_PASSWORD');
+    const passwordHash = await bcrypt.hash(seedPassword, 10);
 
     const persistedUsers = [];
 
@@ -290,7 +299,7 @@ async function run() {
 
     console.log('? Seed completado: 28 usuarios de comunidad creados/actualizados.');
     console.log('? Ranking variado, red de seguidores/seguidos actualizada y actividad historica generada.');
-    console.log('?? Password para todos: Test@1234');
+    console.log('?? Password para todos: (definida por SEED_DEFAULT_PASSWORD)');
     process.exit(0);
   } catch (error) {
     console.error('? Error en seed-community-users:', error.message);

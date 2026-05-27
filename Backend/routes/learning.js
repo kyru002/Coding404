@@ -10,7 +10,6 @@ const UserLeague = require('../models/UserLeague');
 const User = require('../models/User');
 const UserLanguageProgress = require('../models/UserLanguageProgress');
 const Friendship = require('../models/Friendship');
-const { seedCurricula } = require('../data/curriculaSeed');
 
 const router = express.Router();
 
@@ -18,16 +17,34 @@ const LANGUAGE_ALIASES = {
   MYSQL: 'SQL',
 };
 
+let supportedLanguagesCache = null;
+
 const normalizeLanguage = (language = '') => {
   const value = String(language).trim();
   const alias = LANGUAGE_ALIASES[value.toUpperCase()];
   return alias || value;
 };
-const SUPPORTED_LANGUAGES = new Set(seedCurricula.map((item) => normalizeLanguage(item.language)));
+const getSupportedLanguages = async () => {
+  if (supportedLanguagesCache instanceof Set && supportedLanguagesCache.size > 0) {
+    return supportedLanguagesCache;
+  }
 
-const isSupportedLanguage = (language = '') => {
+  const languages = await Course.distinct('language');
+  supportedLanguagesCache = new Set(languages.map((item) => normalizeLanguage(item)).filter(Boolean));
+
+  if (supportedLanguagesCache.size === 0) {
+    await ensureCurriculaClassified();
+    const seededLanguages = await Course.distinct('language');
+    supportedLanguagesCache = new Set(seededLanguages.map((item) => normalizeLanguage(item)).filter(Boolean));
+  }
+
+  return supportedLanguagesCache;
+};
+
+const isSupportedLanguage = async (language = '') => {
   const normalized = normalizeLanguage(language);
-  return SUPPORTED_LANGUAGES.has(normalized);
+  const supportedLanguages = await getSupportedLanguages();
+  return supportedLanguages.has(normalized);
 };
 const LEVELS_PER_LANGUAGE = 30;
 const POINTS_PER_LEVEL = 2;
@@ -225,6 +242,38 @@ const localizeCurriculumLevel = (level, uiLanguage = 'es') => {
   return localizeStructuredValue(level, 'en');
 };
 
+// Caché en memoria para currículum (24 horas TTL)
+const CURRICULUM_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas en ms
+const curriculumCache = new Map();
+
+const getCacheKey = (language, uiLanguage) => `${String(language).toLowerCase()}-${uiLanguage}`;
+
+const isCacheValid = (cacheEntry) => {
+  if (!cacheEntry) return false;
+  const now = Date.now();
+  return now - cacheEntry.timestamp < CURRICULUM_CACHE_TTL;
+};
+
+const getCachedCurriculum = (language, uiLanguage) => {
+  const key = getCacheKey(language, uiLanguage);
+  const entry = curriculumCache.get(key);
+  if (isCacheValid(entry)) {
+    return entry.data;
+  }
+  if (entry) {
+    curriculumCache.delete(key); // Limpiar entrada expirada
+  }
+  return null;
+};
+
+const setCachedCurriculum = (language, uiLanguage, data) => {
+  const key = getCacheKey(language, uiLanguage);
+  curriculumCache.set(key, {
+    data,
+    timestamp: Date.now(),
+  });
+};
+
 const getLeague = (points) => {
   let leagueName = 'Junior Explorer';
   
@@ -262,7 +311,16 @@ const leagueSeed = [
 ];
 
 const ensureCurriculaClassified = async () => {
-  const sourceCurricula = seedCurricula;
+  const sourceCurricula = await Course.find({}, {
+    language: 1,
+    description: 1,
+    createdAtCourse: 1,
+  }).sort({ language: 1 }).lean();
+
+  if (sourceCurricula.length === 0) {
+    supportedLanguagesCache = new Set();
+    return;
+  }
 
   for (const curriculum of sourceCurricula) {
     const language = normalizeLanguage(curriculum.language);
@@ -270,36 +328,18 @@ const ensureCurriculaClassified = async () => {
       continue;
     }
 
-    const course = await Course.findOneAndUpdate(
-      { language },
-      {
-        title: `${language} Course`,
-        description: curriculum.description || '',
-        titleI18n: {
-          es: `${language} Course`,
-          en: `${language} Course`,
-        },
-        descriptionI18n: {
-          es: curriculum.description || '',
-          en: translateTextToEnglish(curriculum.description || ''),
-        },
-        language,
-        createdAtCourse: curriculum.createdAt || new Date(),
-      },
-      {
-        upsert: true,
-        returnDocument: 'after',
-        setDefaultsOnInsert: true,
-      }
-    );
+    const course = await Course.findOne({ language }).lean();
+    if (!course) {
+      continue;
+    }
 
     const courseEn = await CourseEn.findOneAndUpdate(
       { language },
       {
         title: `${language} Course`,
-        description: translateTextToEnglish(curriculum.description || ''),
+        description: translateTextToEnglish(course.description || ''),
         language,
-        createdAtCourse: curriculum.createdAt || new Date(),
+        createdAtCourse: course.createdAtCourse || new Date(),
       },
       {
         upsert: true,
@@ -308,42 +348,38 @@ const ensureCurriculaClassified = async () => {
       }
     );
 
-    const levels = Array.isArray(curriculum.levels) ? [...curriculum.levels] : [];
-    levels.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+    const levels = await Lesson.find({ courseId: course._id }).sort({ orderInCourse: 1 }).lean();
 
     for (const level of levels) {
-      const orderInCourse = Number(level.id || 0);
+      const orderInCourse = Number(level.orderInCourse || level.id || 0);
       if (!Number.isInteger(orderInCourse) || orderInCourse <= 0) {
         continue;
       }
 
-      const theoryBlock = Array.isArray(level?.content?.theory)
-        ? level.content.theory.join('\n')
-        : '';
-      const levelEn = localizeCurriculumLevel(level, 'en');
-      const theoryBlockEn = Array.isArray(levelEn?.content?.theory)
-        ? levelEn.content.theory.join('\n')
-        : translateTextToEnglish(theoryBlock);
+      const theoryBlock = level.theoryContent || '';
+      const rawLessonData = level?.lessonData || level;
+      const levelEn = localizeCurriculumLevel(rawLessonData, 'en');
+      const theoryBlockEn = translateTextToEnglish(theoryBlock);
 
       await Lesson.findOneAndUpdate(
         { courseId: course._id, orderInCourse },
         {
           courseId: course._id,
-          title: level.name || `Lección ${orderInCourse}`,
+          title: level.title || level.name || `Lección ${orderInCourse}`,
           titleI18n: {
-            es: level.name || `Lección ${orderInCourse}`,
-            en: translateTextToEnglish(level.name || `Lección ${orderInCourse}`),
+            es: level.title || level.name || `Lección ${orderInCourse}`,
+            en: translateTextToEnglish(level.title || level.name || `Lección ${orderInCourse}`),
           },
           orderInCourse,
-          theoryContent: theoryBlock,
+          theoryContent: level.theoryContent || theoryBlock,
           theoryContentI18n: {
-            es: theoryBlock,
-            en: translateTextToEnglish(theoryBlock),
+            es: level.theoryContent || theoryBlock,
+            en: translateTextToEnglish(level.theoryContent || theoryBlock),
           },
-          lessonData: level,
+          lessonData: rawLessonData,
           lessonDataI18n: {
-            es: level,
-            en: localizeCurriculumLevel(level, 'en'),
+            es: rawLessonData,
+            en: levelEn,
           },
         },
         {
@@ -357,7 +393,7 @@ const ensureCurriculaClassified = async () => {
         { courseId: courseEn._id, orderInCourse },
         {
           courseId: courseEn._id,
-          title: levelEn?.name || translateTextToEnglish(level.name || `Lección ${orderInCourse}`),
+          title: levelEn?.name || translateTextToEnglish(level.title || level.name || `Lección ${orderInCourse}`),
           orderInCourse,
           theoryContent: theoryBlockEn,
           lessonData: levelEn,
@@ -372,6 +408,8 @@ const ensureCurriculaClassified = async () => {
   }
 
   // Conservamos la colección legacy Curriculum para no borrar datos históricos.
+  const seededLanguages = await Course.distinct('language');
+  supportedLanguagesCache = new Set(seededLanguages.map((item) => normalizeLanguage(item)).filter(Boolean));
 };
 
 const ensureLeaguesSeeded = async () => {
@@ -403,21 +441,18 @@ router.get('/curricula/:language', async (req, res) => {
     const language = normalizeLanguage(req.params.language);
     const uiLanguage = normalizeUiLanguage(req.query?.lang);
 
+    // Verificar caché primero
+    const cachedCurriculum = getCachedCurriculum(language, uiLanguage);
+    if (cachedCurriculum) {
+      return res.json({ curriculum: cachedCurriculum });
+    }
+
     await ensureCurriculaClassified();
     const CourseModel = uiLanguage === 'en' ? CourseEn : Course;
     const LessonModel = uiLanguage === 'en' ? LessonEn : Lesson;
     let course = await CourseModel.findOne({ language }).lean();
 
     if (!course) {
-      // Fallback para HTML si aún no existe en colecciones nuevas.
-      if (String(language).toUpperCase() === 'HTML') {
-        // eslint-disable-next-line global-require
-        const htmlCurriculum = require('../../Frontend/src/data/languages/html.json');
-        const localizedHtmlCurriculum = uiLanguage === 'en'
-          ? localizeStructuredValue(htmlCurriculum, 'en')
-          : htmlCurriculum;
-        return res.json({ curriculum: localizedHtmlCurriculum });
-      }
       return res.status(404).json({ message: 'Temario no encontrado para ese lenguaje.' });
     }
 
@@ -498,6 +533,9 @@ router.get('/curricula/:language', async (req, res) => {
       levels: normalizedLevels,
     };
 
+    // Guardar en caché antes de retornar
+    setCachedCurriculum(language, uiLanguage, curriculum);
+
     return res.json({ curriculum });
   } catch (error) {
     return res.status(500).json({ message: 'No se pudo obtener el temario.' });
@@ -513,8 +551,55 @@ router.get('/progress/:userId/:language', async (req, res) => {
       return res.status(400).json({ message: 'ID de usuario inválido.' });
     }
 
-    if (!isSupportedLanguage(language)) {
+    if (!(await isSupportedLanguage(language))) {
       return res.status(400).json({ message: `Lenguaje inválido para progreso: ${language}` });
+    }
+
+    // Si el usuario es el Demo (usuario de demostración), devolvemos progreso completo.
+    const user = await User.findById(userId, { username: 1 }).lean();
+    if (user && String(user.username).toLowerCase() === 'demo') {
+      const allLevels = Array.from({ length: LEVELS_PER_LANGUAGE }, (_, i) => i + 1);
+
+      // Persistir progreso completo para el lenguaje solicitado
+      const fullProgressForRequested = {
+        userId,
+        language,
+        completedLevels: allLevels,
+        completionPercentage: 100,
+        totalPoints: allLevels.length * POINTS_PER_LEVEL,
+        completedAt: new Date(),
+        lastActivityAt: new Date(),
+      };
+
+      await UserLanguageProgress.findOneAndUpdate(
+        { userId, language },
+        fullProgressForRequested,
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+
+      // Asegurar que el usuario demo tenga progreso completo en todos los lenguajes soportados
+      const languagesToSeed = Array.from(await getSupportedLanguages());
+      const ops = languagesToSeed.map((lang) => {
+        const doc = {
+          userId,
+          language: lang,
+          completedLevels: allLevels,
+          completionPercentage: 100,
+          totalPoints: allLevels.length * POINTS_PER_LEVEL,
+          completedAt: new Date(),
+          lastActivityAt: new Date(),
+        };
+        return UserLanguageProgress.findOneAndUpdate(
+          { userId, language: lang },
+          doc,
+          { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+        );
+      });
+
+      // Ejecutar en paralelo
+      await Promise.all(ops);
+
+      return res.json({ progress: fullProgressForRequested });
     }
 
     const progress = await UserLanguageProgress.findOne({ userId, language });
@@ -541,7 +626,7 @@ router.put('/progress/:userId/:language', async (req, res) => {
       return res.status(400).json({ message: 'ID de usuario inválido.' });
     }
 
-    if (!isSupportedLanguage(language)) {
+    if (!(await isSupportedLanguage(language))) {
       return res.status(400).json({ message: `Lenguaje inválido para progreso: ${language}` });
     }
 
@@ -784,55 +869,11 @@ router.get('/leaderboard', async (req, res) => {
   }
 });
 
-// Endpoint para completar todos los cursos de un usuario (útil para pruebas)
-router.post('/complete-all-courses/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: 'ID de usuario inválido.' });
-    }
-
-    const userExists = await User.exists({ _id: userId });
-    if (!userExists) {
-      return res.status(404).json({ message: 'Usuario no encontrado.' });
-    }
-
-    const languages = ['Python', 'JavaScript', 'HTML', 'CSS', 'Java', 'SQL', 'Vue', 'PHP', 'Node.js'];
-    const allCompletedLevels = Array.from({ length: 30 }, (_, i) => i + 1); // 30 niveles completos
-
-    let updated = 0;
-
-    for (const language of languages) {
-      await UserLanguageProgress.findOneAndUpdate(
-        { userId, language },
-        {
-          userId,
-          language,
-          completedLevels: allCompletedLevels,
-          completionPercentage: 100,
-          totalPoints: allCompletedLevels.length * POINTS_PER_LEVEL,
-          completedAt: new Date(),
-          lastActivityAt: new Date(),
-        },
-        {
-          upsert: true,
-          returnDocument: 'after',
-          setDefaultsOnInsert: true,
-        }
-      );
-      updated++;
-    }
-
-    return res.json({
-      message: 'Todos los cursos completados',
-      totalCoursesCompleted: updated,
-      totalPoints: (allCompletedLevels.length * POINTS_PER_LEVEL) * languages.length,
-    });
-  } catch (error) {
-    return res.status(500).json({ message: 'No se pudo completar los cursos.' });
-  }
-});
+// DEPRECATED: Testing endpoint - only for development. Commented out for security.
+// router.post('/complete-all-courses/:userId', async (req, res) => {
+//   // Esta ruta se ha comentado para evitar completar cursos accidentalmente en producción.
+//   // Descomenta si necesitas pruebas masivas durante desarrollo.
+// });
 
 // Mapeo de lenguajes a lecciones
 const LANGUAGE_TO_LESSON_MAP = {
@@ -876,10 +917,6 @@ router.post('/complete-lesson/:userId/:language', async (req, res) => {
     // Verificar que se completaron TODOS los 30 niveles del lenguaje
     const REQUIRED_COMPLETED_LEVELS = 30;
 
-    console.log(
-      `📊 ${language}: ${completedCount}/${REQUIRED_COMPLETED_LEVELS} niveles completados`
-    );
-
     // Si no están todos los 30 completados, no marcar la lección
     if (completedCount < REQUIRED_COMPLETED_LEVELS) {
       return res.json({
@@ -916,7 +953,6 @@ router.post('/complete-lesson/:userId/:language', async (req, res) => {
     if (!user.learningPath.completedLessons.includes(lessonId)) {
       user.learningPath.completedLessons.push(lessonId);
       await user.save();
-      console.log(`✅ Lección "${lessonId}" completada para usuario ${user.username}`);
     }
 
     return res.json({

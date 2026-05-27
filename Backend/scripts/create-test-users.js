@@ -5,6 +5,14 @@ const User = require('../models/User');
 
 dotenv.config({ path: '.env.local' });
 
+const getRequiredEnv = (name) => {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    throw new Error(`Falta ${name} en .env.local`);
+  }
+  return value;
+};
+
 const createTestUsers = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -24,7 +32,7 @@ const createTestUsers = async () => {
       { fullName: 'User Novato', username: 'user_novato', email: 'user_novato@test.com', programmerType: 'Novato' },
     ];
 
-    const password = 'Test@1234';
+    const password = getRequiredEnv('SEED_DEFAULT_PASSWORD');
     const passwordHash = await bcrypt.hash(password, 10);
 
     console.log('👤 Creando usuarios de prueba...\n');
@@ -71,7 +79,7 @@ const createTestUsers = async () => {
     console.log(`\n📊 Resumen:`);
     console.log(`✅ Usuarios creados: ${created}`);
     console.log(`⏭️  Usuarios existentes: ${updated}`);
-    console.log(`\n🔑 Contraseña para todos: ${password}\n`);
+    console.log('\n🔑 Contraseña para todos: (definida por SEED_DEFAULT_PASSWORD)\n');
     console.log(`📝 Próximo paso: ejecutar 'node Backend/scripts/assign-user-points.js' para asignar puntos`);
     
     process.exit(0);

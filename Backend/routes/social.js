@@ -32,6 +32,24 @@ const PUBLIC_USER_FILTER = {
 const BATTLE_LANGUAGES = ['Python', 'Java', 'SQL', 'HTML/CSS'];
 const BATTLE_REQUEST_TTL_MS = 10 * 60 * 1000;
 
+const requireEnvValue = (name) => {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    throw new Error(`Variable de entorno requerida faltante: ${name}`);
+  }
+  return value;
+};
+
+const getSeedPassword = () => {
+  const primary = String(process.env.DEMO_USER_PASSWORD || '').trim();
+  if (primary) return primary;
+  const secondary = String(process.env.DEMO_USERS_PASSWORD || '').trim();
+  if (secondary) return secondary;
+  const fallback = String(process.env.SEED_DEFAULT_PASSWORD || '').trim();
+  if (fallback) return fallback;
+  throw new Error('Falta password de seed: define DEMO_USER_PASSWORD, DEMO_USERS_PASSWORD o SEED_DEFAULT_PASSWORD en .env.local');
+};
+
 const getLeagueForPoints = (points) => {
   if (points >= 1000) return { key: 'legendary-lead', name: 'Legendary Lead', image: '/images/6.png' };
   if (points >= 800) return { key: 'tech-architect', name: 'Tech Architect', image: '/images/5.png' };
@@ -394,6 +412,7 @@ const formatCommunityPost = (postDoc, viewerUserId = '', viewerIsAdmin = false) 
       description: sanitizeText(post?.project?.description),
       url: sanitizeUrl(post?.project?.url),
       category: sanitizeText(post?.project?.category) || 'Proyectos',
+      tag: sanitizeText(post?.project?.tag) || '',
     },
   };
 };
@@ -403,11 +422,7 @@ const ensureAdminUserSeeded = async () => {
   const adminEmail = sanitizeText(process.env.ADMIN_EMAIL) || 'admin@coding404.dev';
   const adminFullName = sanitizeText(process.env.ADMIN_FULL_NAME) || 'Administrador Coding 404';
   const adminProgrammerType = sanitizeText(process.env.ADMIN_PROGRAMMER_TYPE) || 'Administración';
-  const adminPassword = String(process.env.ADMIN_PASSWORD || 'Admin404A').trim();
-
-  if (!adminPassword) {
-    throw new Error('ADMIN_PASSWORD vacío. Define una contraseña para el usuario administrador.');
-  }
+  const adminPassword = requireEnvValue('ADMIN_PASSWORD');
 
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
@@ -454,7 +469,8 @@ const ensureDemoUsersSeeded = async () => {
     { fullName: 'Santi Dev', email: 'santi@coding404.dev', username: 'santi', programmerType: 'Full-Stack', xpTarget: 100 },
   ];
 
-  const passwordHash = await bcrypt.hash('Demo1234', 10);
+  const demoPassword = getSeedPassword();
+  const passwordHash = await bcrypt.hash(demoPassword, 10);
 
   // Avatar data URLs (simple colored gradients)
   const avatars = [
@@ -861,6 +877,30 @@ const ensureDemoUsersSeeded = async () => {
     });
   }
 
+  const demoUser = await User.findOne({ username: 'demo' });
+  const kyruUser = await User.findOne({ username: 'kyru002' });
+  if (demoUser && kyruUser) {
+    await Friendship.findOneAndUpdate(
+      {
+        $or: [
+          { userId: demoUser._id, friendId: kyruUser._id },
+          { userId: kyruUser._id, friendId: demoUser._id },
+        ],
+      },
+      {
+        userId: demoUser._id,
+        friendId: kyruUser._id,
+        status: 'accepted',
+        requestedAt: new Date('2026-01-15T00:00:00.000Z'),
+        establishedAt: new Date('2026-01-16T00:00:00.000Z'),
+      },
+      {
+        upsert: true,
+        returnDocument: 'after',
+      }
+    );
+  }
+
 };
 
 router.post('/activity/:userId', async (req, res) => {
@@ -1000,11 +1040,43 @@ router.get('/friends/:userId', async (req, res) => {
   }
 });
 
+router.delete('/friends', async (req, res) => {
+  try {
+    const { userId, targetUserId } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(targetUserId)) {
+      return res.status(400).json({ message: 'Datos inválidos.' });
+    }
+
+    const actor = await ensureActiveActor(userId, res, { allowAdmin: false });
+    if (!actor) return;
+
+    if (String(userId) === String(targetUserId)) {
+      return res.status(400).json({ message: 'No puedes eliminarte a ti mismo.' });
+    }
+
+    const result = await Friendship.deleteMany({
+      $or: [
+        { userId, friendId: targetUserId },
+        { userId: targetUserId, friendId: userId },
+      ],
+    });
+
+    if (!result.deletedCount) {
+      return res.status(404).json({ message: 'No existe esa amistad.' });
+    }
+
+    return res.json({ message: 'Amistad eliminada.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'No se pudo eliminar la amistad.' });
+  }
+});
+
 router.get('/users', async (req, res) => {
   try {
     const { page, limit, skip } = parsePagination(req.query, { page: 1, limit: 200, maxLimit: 500 });
 
-    const users = await User.find(PUBLIC_USER_FILTER, { username: 1, fullName: 1, avatarUrl: 1, bio: 1 })
+    const users = await User.find({ isBanned: { $ne: true } }, { username: 1, fullName: 1, avatarUrl: 1, bio: 1 })
       .sort({ registeredAt: 1, username: 1 })
       .skip(skip)
       .limit(limit)
@@ -1153,6 +1225,7 @@ router.post('/community/posts', async (req, res) => {
       description: sanitizeText(project?.description),
       url: sanitizeUrl(project?.url),
       category: sanitizeText(project?.category) || 'Proyectos',
+      tag: sanitizeText(project?.tag) || 'Git',
     };
 
     const hasProject = Boolean(projectData.title || projectData.url || projectData.description);
@@ -1174,6 +1247,7 @@ router.post('/community/posts', async (req, res) => {
       likes: [],
       comments: [],
       shareCount: 0,
+      tag: hasProject ? projectData.tag : '',
       project: hasProject ? projectData : {},
     });
 

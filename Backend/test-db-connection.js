@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
-const uri = process.env.MONGODB_URI || 'mongodb+srv://Admin:admin123@coding404.dzsh0ed.mongodb.net/Coding404?retryWrites=true&w=majority';
+const uri = process.env.MONGODB_URI;
+
+if (!uri) {
+  throw new Error('MONGODB_URI no está definida. Configúrala en tu archivo .env.local');
+}
 
 (async () => {
   try {

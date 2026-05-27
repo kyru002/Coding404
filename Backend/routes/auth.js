@@ -123,17 +123,18 @@ router.post('/register', async (req, res) => {
       },
     });
 
-    // Enviar email de bienvenida con credenciales
+    // Enviar email de bienvenida sin contraseña en texto plano
     await sendWelcomeEmail({
       fullName: newUser.fullName,
       email: newUser.email,
       username: newUser.username,
-      password: password // Pasar la contraseña en texto plano SOLO para el email
     });
 
     return res.status(201).json({
       message: 'Usuario registrado correctamente.',
       userId: newUser._id,
+      fullName: newUser.fullName,
+      email: newUser.email,
       username: newUser.username,
       programmerType: newUser.programmerType,
       learningPath: newUser.learningPath,
@@ -178,6 +179,8 @@ router.post('/login', async (req, res) => {
     return res.json({
       message: 'Login correcto.',
       userId: user._id,
+      fullName: user.fullName,
+      email: user.email,
       username: user.username,
       programmerType: user.programmerType,
       learningPath: user.learningPath,
