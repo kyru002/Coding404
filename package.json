@@ -1,0 +1,13 @@
+{
+  "name": "coding-404-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "node scripts/dev-all.js",
+    "dev:backend": "npm run dev --prefix Backend",
+    "dev:frontend": "npm run dev --prefix Frontend"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}

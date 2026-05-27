@@ -1,0 +1,24 @@
+<svg width="960" height="540" viewBox="0 0 960 540" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="960" y2="540" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E2A36"/>
+      <stop offset="1" stop-color="#071922"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="140" y1="90" x2="820" y2="450" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#143646"/>
+      <stop offset="1" stop-color="#0D2531"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="540" fill="url(#bg)"/>
+  <rect x="140" y="90" width="680" height="360" rx="16" fill="url(#panel)" stroke="#4A8198" stroke-width="2"/>
+
+  <text x="170" y="140" font-family="Arial, sans-serif" font-size="18" fill="#8FD8F6">Resultado esperado</text>
+
+  <text x="190" y="205" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#E8FBFF">&lt;h1&gt;Título Principal&lt;/h1&gt;</text>
+  <text x="210" y="280" font-family="Arial, sans-serif" font-size="38" font-weight="600" fill="#C9F0FF">&lt;h2&gt;Subtítulo&lt;/h2&gt;</text>
+  <text x="228" y="342" font-family="Arial, sans-serif" font-size="28" font-weight="600" fill="#AEE4F8">&lt;h3&gt;Detalle&lt;/h3&gt;</text>
+
+  <rect x="170" y="380" width="620" height="44" rx="10" fill="#0A1B24" stroke="#3A6D81"/>
+  <text x="190" y="408" font-family="Consolas, monospace" font-size="18" fill="#7AD5FF">Fondo HTML con 3 títulos: h1, h2 y h3</text>
+</svg>
