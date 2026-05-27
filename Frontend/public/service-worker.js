@@ -1,10 +1,20 @@
 const CACHE_NAME = "coding404-cache-v1";
+
+const getBaseUrl = () => {
+  try {
+    return self.registration?.scope || `${self.location.origin}/`;
+  } catch (_error) {
+    return `${self.location.origin}/`;
+  }
+};
+
+const withBase = (path) => new URL(String(path || '').replace(/^\/+/, ''), getBaseUrl()).href;
+
 const urlsToCache = [
-  "/",
-  "/index.html",
-  "/src/main.js",
-  "/images/logo-192x192-px.png",
-  "/images/logo-512x512-px.png"
+  withBase('/'),
+  withBase('/index.html'),
+  withBase('/images/logo-192x192-px.png'),
+  withBase('/images/logo-512x512-px.png')
 ];
 
 self.addEventListener("install", (event) => {

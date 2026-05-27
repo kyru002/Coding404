@@ -1,15 +1,20 @@
 <template>
   <div class="home-blank">
     <div class="logo-reveal" aria-label="Coding 404">
-      <img src="/images/Coding-404-logo.png" alt="" class="logo-base" />
-      <img src="/images/Coding-404-logo.png" alt="Coding 404" class="logo-fill" />
+      <img :src="assetUrl('/images/Coding-404-logo.png')" alt="" class="logo-base" />
+      <img :src="assetUrl('/images/Coding-404-logo.png')" alt="Coding 404" class="logo-fill" />
     </div>
   </div>
 </template>
 
 <script>
+import { assetUrl } from '../utils/assets'
+
 export default {
   name: 'Carga',
+  methods: {
+    assetUrl,
+  },
   mounted() {
     setTimeout(() => {
       this.$emit('show-inicio');

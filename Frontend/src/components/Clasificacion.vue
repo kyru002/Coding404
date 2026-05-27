@@ -94,7 +94,7 @@
           <p v-if="selectedLeaderboardUser.bio" class="friend-profile-bio">{{ selectedLeaderboardUser.bio }}</p>
 
           <div v-if="selectedLeaderboardUser.league" class="friend-profile-league">
-            <img :src="selectedLeaderboardUser.league.image" :alt="selectedLeaderboardUser.league.name" class="friend-profile-league-img">
+            <img :src="assetUrl(selectedLeaderboardUser.league.image)" :alt="selectedLeaderboardUser.league.name" class="friend-profile-league-img">
             <span class="friend-profile-league-name">{{ selectedLeaderboardUser.league.name }}</span>
           </div>
 
@@ -217,6 +217,7 @@
 
 <script>
 import { API_BASE_URL } from '../config/api'
+import { assetUrl } from '../utils/assets'
 
 export default {
   name: 'Clasificacion',
@@ -240,12 +241,12 @@ export default {
       socialApiBaseUrl: `${API_BASE_URL}/api/social`,
       uiLanguage: 'es',
       leagues: [
-          { order: 1, name: 'Junior Explorer', image: '/images/1.png' },
-          { order: 2, name: 'Code Builder', image: '/images/2.png' },
-          { order: 3, name: 'Stack Crafter', image: '/images/3.png' },
-          { order: 4, name: 'Software Engineer', image: '/images/4.png' },
-          { order: 5, name: 'Tech Architect', image: '/images/5.png' },
-          { order: 6, name: 'Legendary Lead', image: '/images/6.png' }
+          { order: 1, name: 'Junior Explorer', image: assetUrl('/images/1.png') },
+          { order: 2, name: 'Code Builder', image: assetUrl('/images/2.png') },
+          { order: 3, name: 'Stack Crafter', image: assetUrl('/images/3.png') },
+          { order: 4, name: 'Software Engineer', image: assetUrl('/images/4.png') },
+          { order: 5, name: 'Tech Architect', image: assetUrl('/images/5.png') },
+          { order: 6, name: 'Legendary Lead', image: assetUrl('/images/6.png') }
       ],
       leaderboardScope: 'global',
       leaderboard: [],
@@ -396,7 +397,10 @@ export default {
         const summary = await this.fetchSummary(this.leaderboardScope)
         this.leaderboard = Array.isArray(summary.leaderboard) ? summary.leaderboard : []
         if (Array.isArray(summary.leagues) && summary.leagues.length > 0) {
-          this.leagues = summary.leagues
+          this.leagues = summary.leagues.map((league) => ({
+            ...league,
+            image: assetUrl(league.image)
+          }))
         }
       } catch (error) {
         console.error('Error cargando clasificación', error)

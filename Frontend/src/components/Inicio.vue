@@ -23,7 +23,7 @@
         <div class="ui-language-picker">
           <button class="ui-language-button" @click="showUiLanguageMenu = !showUiLanguageMenu" :title="t('changeUiLanguage')">
             <img
-              :src="uiLanguage === 'es' ? '/images/espana.png' : '/images/reino-unido.png'"
+              :src="uiLanguage === 'es' ? assetUrl('/images/espana.png') : assetUrl('/images/reino-unido.png')"
               :alt="uiLanguage === 'es' ? 'Bandera ES' : 'Bandera GB'"
               class="ui-flag-image">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="ui-dropdown-icon">
@@ -33,11 +33,11 @@
 
           <div v-if="showUiLanguageMenu" class="ui-language-menu">
             <button class="ui-language-option" @click="setUiLanguage('es')">
-              <img src="/images/espana.png" alt="Bandera ES" class="ui-option-flag-image">
+              <img :src="assetUrl('/images/espana.png')" alt="Bandera ES" class="ui-option-flag-image">
               <span>ES</span>
             </button>
             <button class="ui-language-option" @click="setUiLanguage('en')">
-              <img src="/images/reino-unido.png" alt="Bandera GB" class="ui-option-flag-image">
+              <img :src="assetUrl('/images/reino-unido.png')" alt="Bandera GB" class="ui-option-flag-image">
               <span>EN</span>
             </button>
           </div>
@@ -157,7 +157,7 @@
                   <span class="project-node-subtitle">{{ t('level') }} {{ level.id }}</span>
                 </div>
                 <div class="project-node-icon-wrap" aria-hidden="true">
-                  <img src="/images/codificacion.png" alt="Proyecto" class="project-node-icon">
+                  <img :src="assetUrl('/images/codificacion.png')" alt="Proyecto" class="project-node-icon">
                 </div>
               </div>
               <span v-if="completedLevels.includes(level.id)" class="project-check">✓</span>
@@ -508,6 +508,7 @@
 <script>
 import { VueMonacoEditor } from '@guolao/vue-monaco-editor'
 import { API_BASE_URL } from '../config/api'
+import { assetUrl } from '../utils/assets'
 
 export default {
   name: 'Inicio',
@@ -560,14 +561,14 @@ export default {
         { id: 'data', name: 'Datos' }
       ],
       languages: [
-        { id: 1, name: 'HTML', file: 'html', iconPath: '/images/html-removebg-preview.png', tracks: ['frontend', 'fullstack'] },
-        { id: 2, name: 'CSS', file: 'css', iconPath: '/images/css-removebg-preview.png', tracks: ['frontend', 'fullstack'] },
-        { id: 3, name: 'JavaScript', file: 'javascript', iconPath: '/images/javaScript-removebg-preview.png', tracks: ['frontend', 'fullstack'] },
-        { id: 4, name: 'Vue', file: 'vue', iconPath: '/images/vue-removebg-preview.png', tracks: ['frontend', 'fullstack'] },
-        { id: 5, name: 'Java', file: 'java', iconPath: '/images/java-removebg-preview.png', tracks: ['backend', 'fullstack'] },
-        { id: 6, name: 'PHP', file: 'php', iconPath: '/images/php-icon.svg', tracks: ['backend'] },
-        { id: 7, name: 'Python', file: 'python', iconPath: '/images/python-removebg-preview.png', tracks: ['backend', 'data'] },
-        { id: 8, name: 'MySQL', file: 'mysql', iconPath: '/images/sql-removebg-preview.png', tracks: ['backend', 'fullstack', 'data'] }
+        { id: 1, name: 'HTML', file: 'html', iconPath: assetUrl('/images/html-removebg-preview.png'), tracks: ['frontend', 'fullstack'] },
+        { id: 2, name: 'CSS', file: 'css', iconPath: assetUrl('/images/css-removebg-preview.png'), tracks: ['frontend', 'fullstack'] },
+        { id: 3, name: 'JavaScript', file: 'javascript', iconPath: assetUrl('/images/javaScript-removebg-preview.png'), tracks: ['frontend', 'fullstack'] },
+        { id: 4, name: 'Vue', file: 'vue', iconPath: assetUrl('/images/vue-removebg-preview.png'), tracks: ['frontend', 'fullstack'] },
+        { id: 5, name: 'Java', file: 'java', iconPath: assetUrl('/images/java-removebg-preview.png'), tracks: ['backend', 'fullstack'] },
+        { id: 6, name: 'PHP', file: 'php', iconPath: assetUrl('/images/php-icon.svg'), tracks: ['backend'] },
+        { id: 7, name: 'Python', file: 'python', iconPath: assetUrl('/images/python-removebg-preview.png'), tracks: ['backend', 'data'] },
+        { id: 8, name: 'MySQL', file: 'mysql', iconPath: assetUrl('/images/sql-removebg-preview.png'), tracks: ['backend', 'fullstack', 'data'] }
       ],
       errorMessage: '',
       pointsPerLevel: 2,
@@ -1198,6 +1199,7 @@ export default {
     }
   },
   methods: {
+    assetUrl,
     t(key) {
       const dictionary = {
         es: {

@@ -198,6 +198,7 @@
 
 <script>
 import { API_BASE_URL } from '../config/api'
+import { assetUrl } from '../utils/assets'
 
 export default {
   name: 'Lecciones',
@@ -942,7 +943,7 @@ export default {
         'APIs': '/images/apis-removebg-preview.png',
         'APIs REST': '/images/apis-removebg-preview.png'
       }
-      return iconMap[tech] || '/images/Coding-404-logo.png'
+      return assetUrl(iconMap[tech] || '/images/Coding-404-logo.png')
     },
     async persistLearningPath(nextPath) {
       this.$emit('user-updated', {

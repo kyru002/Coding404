@@ -64,13 +64,13 @@
           <aside class="workspace-left">
             <img
               v-if="isHtmlCssChallenge"
-              src="/images/Proyecto_html_css.png"
+              :src="assetUrl('/images/Proyecto_html_css.png')"
               alt="Ejercicio HTML/CSS"
               class="workspace-image"
             >
             <img
               v-else-if="isJavaChallenge"
-              src="/images/proyecto%20java.png"
+              :src="assetUrl('/images/proyecto java.png')"
               alt="Ejercicio Java"
               class="workspace-image"
             >
@@ -405,7 +405,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                 <button class="action-btn like-btn" :class="{ active: post.likedByMe }" @click="toggleLike(post)">
                   <img
                     class="action-icon"
-                    :src="post.likedByMe ? '/images/corazon.png' : '/images/me-gusta.png'"
+                    :src="post.likedByMe ? assetUrl('/images/corazon.png') : assetUrl('/images/me-gusta.png')"
                     alt="Like"
                   >
                   {{ post.likes }}
@@ -413,7 +413,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                 <button class="action-btn" :class="{ active: isCommentsOpen(post.id) }" @click="toggleComments(post)">
                   <img
                     class="action-icon"
-                    src="/images/comentario.png"
+                    :src="assetUrl('/images/comentario.png')"
                     alt="Comentarios"
                   >
                   {{ post.commentsCount }}
@@ -421,7 +421,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                 <button class="action-btn" :class="{ active: post.savedByMe }" @click="toggleSave(post)">
                   <img
                     class="action-icon"
-                    :src="post.savedByMe ? '/images/guardar-instagram%20%281%29.png' : '/images/guardar-instagram.png'"
+                    :src="post.savedByMe ? assetUrl('/images/guardar-instagram (1).png') : assetUrl('/images/guardar-instagram.png')"
                     alt="Guardar"
                   >
                   {{ t('save') }}{{ post.savedCount ? ` (${post.savedCount})` : '' }}
@@ -429,7 +429,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                 <button class="action-btn" :class="{ active: isPostShared(post.id) }" @click="sharePost(post)">
                   <img
                     class="action-icon"
-                    :src="isPostShared(post.id) ? '/images/compartir%20%281%29.png' : '/images/compartir.png'"
+                    :src="isPostShared(post.id) ? assetUrl('/images/compartir (1).png') : assetUrl('/images/compartir.png')"
                     alt="Compartir"
                   >
                   {{ t('share') }}{{ post.shareCount ? ` (${post.shareCount})` : '' }}
@@ -507,7 +507,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
               <p v-if="selectedPostUser.bio" class="friend-profile-bio">{{ selectedPostUser.bio }}</p>
 
               <div v-if="selectedPostUser.league" class="friend-profile-league">
-                <img :src="selectedPostUser.league.image" :alt="selectedPostUser.league.name" class="friend-profile-league-img">
+                <img :src="assetUrl(selectedPostUser.league.image)" :alt="selectedPostUser.league.name" class="friend-profile-league-img">
                 <span class="friend-profile-league-name">{{ selectedPostUser.league.name }}</span>
               </div>
 
@@ -743,6 +743,7 @@ Ganador: Coche Rayo con 55 de distancia</pre>
 <script>
 import { API_BASE_URL } from '../config/api'
 import { io } from 'socket.io-client';
+import { assetUrl } from '../utils/assets'
 
 export default {
   name: 'Comunidad',
@@ -819,10 +820,10 @@ export default {
       selectedCategory: 'Proyectos',
       categories: ['Estructuras', 'Proyectos', 'Git', 'Algoritmos'],
       categoryCards: [
-        { name: 'Estructuras', icon: '/images/Estructuras.png' },
-        { name: 'Proyectos', icon: '/images/Proyectos.png' },
-        { name: 'Git', icon: '/images/git.png' },
-        { name: 'Algoritmos', icon: '/images/Algoritmos.png' }
+        { name: 'Estructuras', icon: assetUrl('/images/Estructuras.png') },
+        { name: 'Proyectos', icon: assetUrl('/images/Proyectos.png') },
+        { name: 'Git', icon: assetUrl('/images/git.png') },
+        { name: 'Algoritmos', icon: assetUrl('/images/Algoritmos.png') }
       ],
       showUploadModal: false,
       showProjectPostModal: false,
@@ -1003,6 +1004,7 @@ export default {
     window.removeEventListener('storage', this.onStorageLanguageChanged)
   },
   methods: {
+    assetUrl,
     initializeSocket() {
       try {
         this.socket = io(this.socialApiBaseUrl, {

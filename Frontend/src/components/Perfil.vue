@@ -52,7 +52,7 @@
                 <p class="friend-username">@{{ friend.username }}</p>
                 <p v-if="friend.bio" class="friend-bio">{{ friend.bio }}</p>
                 <div v-if="friend.league" class="friend-league">
-                  <img :src="friend.league.image" :alt="friend.league.name" class="friend-league-img">
+                  <img :src="assetUrl(friend.league.image)" :alt="friend.league.name" class="friend-league-img">
                   <span>{{ friend.league.name }}</span>
                 </div>
               </div>
@@ -81,7 +81,7 @@
               <h4>{{ request.fullName || request.username }}</h4>
               <p class="request-username">@{{ request.username }}</p>
               <div v-if="request.league" class="request-league">
-                <img :src="request.league.image" :alt="request.league.name" class="request-league-img">
+                <img :src="assetUrl(request.league.image)" :alt="request.league.name" class="request-league-img">
                 <span>{{ request.league.name }}</span>
               </div>
             </div>
@@ -390,7 +390,7 @@
           <p v-if="selectedFriend.bio" class="friend-profile-bio">{{ selectedFriend.bio }}</p>
     
           <div v-if="selectedFriend.league" class="friend-profile-league">
-            <img :src="selectedFriend.league.image" :alt="selectedFriend.league.name" class="friend-profile-league-img">
+            <img :src="assetUrl(selectedFriend.league.image)" :alt="selectedFriend.league.name" class="friend-profile-league-img">
             <span class="friend-profile-league-name">{{ selectedFriend.league.name }}</span>
           </div>
     
@@ -487,6 +487,7 @@
 
 <script>
 import { API_BASE_URL } from '../config/api'
+import { assetUrl } from '../utils/assets'
 
 export default {
   name: 'Perfil',
@@ -546,7 +547,7 @@ export default {
       },
       league: {
         name: 'Junior Explorer',
-        image: '/images/1.png'
+        image: assetUrl('/images/1.png')
       },
       streak: {
         consecutiveActiveDays: 0
