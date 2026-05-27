@@ -1,6 +1,6 @@
 # Coding404
 
-Plataforma de aprendizaje de programacion con frontend en Vue y backend en Node.js/Express + MongoDB.
+Plataforma de aprendizaje de programacion con frontend en Vue y backend en Node.js/Express + MongoDB.Proyecto de final de grado superior de DAW 
 
 ## Stack
 - Frontend: Vue 3 + Vite
@@ -45,18 +45,7 @@ Esto inicia:
 - Backend en http://localhost:5000
 - Frontend en http://localhost:5173
 
-## Security Notes
-- No se deben commitear secretos ni credenciales reales.
-- No usar contraseñas hardcodeadas en codigo ni scripts.
-- No enviar contraseñas en texto plano por email.
-- Rotar credenciales inmediatamente si se expusieron antes.
 
-## Portfolio Checklist
-Antes de publicar en GitHub como proyecto publico:
-- Verificar que no existan secretos en git history.
-- Configurar variables de entorno en plataforma de deploy.
-- Añadir capturas del proyecto en esta documentacion.
-- Incluir enlace a demo online y descripcion de arquitectura.
 
 ## Suggested Deploy
 - Frontend: Vercel o Netlify
