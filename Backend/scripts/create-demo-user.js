@@ -10,6 +10,14 @@ dotenv.config({ path: '.env.local', quiet: true });
 const LANGUAGES = ['HTML', 'CSS', 'JavaScript', 'Node.js', 'SQL', 'Python', 'Java', 'PHP'];
 const LEVELS_PER_LANGUAGE = 30;
 
+const getDemoPassword = () => {
+  const primary = String(process.env.DEMO_USER_PASSWORD || '').trim();
+  if (primary) return primary;
+  const fallback = String(process.env.DEMO_USERS_PASSWORD || '').trim();
+  if (fallback) return fallback;
+  throw new Error('Falta DEMO_USER_PASSWORD o DEMO_USERS_PASSWORD en el entorno. Defínela en .env.local');
+};
+
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -28,8 +36,9 @@ const createDemoUser = async () => {
     await existing.deleteOne();
   }
 
-  // Crear contraseña hasheada
-  const passwordHash = await bcrypt.hash('Test@1234', 10);
+  // Crear contraseña hasheada desde variable de entorno
+  const demoPassword = getDemoPassword();
+  const passwordHash = await bcrypt.hash(demoPassword, 10);
 
   // Generar todas las lecciones completadas
   const allLessons = [
@@ -94,7 +103,7 @@ const createDemoUser = async () => {
   console.log('\n✓ Usuario Demo completamente configurado');
   console.log('\nCredenciales Demo:');
   console.log('  Username: demo');
-  console.log('  Password: Test@1234');
+  console.log('  Password: (definida por DEMO_USER_PASSWORD o DEMO_USERS_PASSWORD)');
   console.log('  Email: demo@coding404.dev');
 };
 

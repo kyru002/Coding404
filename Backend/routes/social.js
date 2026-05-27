@@ -32,6 +32,24 @@ const PUBLIC_USER_FILTER = {
 const BATTLE_LANGUAGES = ['Python', 'Java', 'SQL', 'HTML/CSS'];
 const BATTLE_REQUEST_TTL_MS = 10 * 60 * 1000;
 
+const requireEnvValue = (name) => {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    throw new Error(`Variable de entorno requerida faltante: ${name}`);
+  }
+  return value;
+};
+
+const getSeedPassword = () => {
+  const primary = String(process.env.DEMO_USER_PASSWORD || '').trim();
+  if (primary) return primary;
+  const secondary = String(process.env.DEMO_USERS_PASSWORD || '').trim();
+  if (secondary) return secondary;
+  const fallback = String(process.env.SEED_DEFAULT_PASSWORD || '').trim();
+  if (fallback) return fallback;
+  throw new Error('Falta password de seed: define DEMO_USER_PASSWORD, DEMO_USERS_PASSWORD o SEED_DEFAULT_PASSWORD en .env.local');
+};
+
 const getLeagueForPoints = (points) => {
   if (points >= 1000) return { key: 'legendary-lead', name: 'Legendary Lead', image: '/images/6.png' };
   if (points >= 800) return { key: 'tech-architect', name: 'Tech Architect', image: '/images/5.png' };
@@ -404,11 +422,7 @@ const ensureAdminUserSeeded = async () => {
   const adminEmail = sanitizeText(process.env.ADMIN_EMAIL) || 'admin@coding404.dev';
   const adminFullName = sanitizeText(process.env.ADMIN_FULL_NAME) || 'Administrador Coding 404';
   const adminProgrammerType = sanitizeText(process.env.ADMIN_PROGRAMMER_TYPE) || 'Administración';
-  const adminPassword = String(process.env.ADMIN_PASSWORD || 'Admin404A').trim();
-
-  if (!adminPassword) {
-    throw new Error('ADMIN_PASSWORD vacío. Define una contraseña para el usuario administrador.');
-  }
+  const adminPassword = requireEnvValue('ADMIN_PASSWORD');
 
   const passwordHash = await bcrypt.hash(adminPassword, 10);
 
@@ -455,7 +469,8 @@ const ensureDemoUsersSeeded = async () => {
     { fullName: 'Santi Dev', email: 'santi@coding404.dev', username: 'santi', programmerType: 'Full-Stack', xpTarget: 100 },
   ];
 
-  const passwordHash = await bcrypt.hash('Demo1234', 10);
+  const demoPassword = getSeedPassword();
+  const passwordHash = await bcrypt.hash(demoPassword, 10);
 
   // Avatar data URLs (simple colored gradients)
   const avatars = [

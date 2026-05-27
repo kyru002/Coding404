@@ -127,6 +127,9 @@ export default {
     }
   }
 }
+
+//js que una vez se inicie  compruebe el local storage para ver si hay un usuario logueado, si lo hay, mostrar la home directamente
+
 </script>
 
 <style scoped>

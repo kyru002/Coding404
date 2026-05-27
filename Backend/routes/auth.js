@@ -123,12 +123,11 @@ router.post('/register', async (req, res) => {
       },
     });
 
-    // Enviar email de bienvenida con credenciales
+    // Enviar email de bienvenida sin contraseña en texto plano
     await sendWelcomeEmail({
       fullName: newUser.fullName,
       email: newUser.email,
       username: newUser.username,
-      password: password // Pasar la contraseña en texto plano SOLO para el email
     });
 
     return res.status(201).json({

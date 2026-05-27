@@ -201,11 +201,6 @@ const sendWelcomeEmail = async (user) => {
                 <div class="credential-label">Correo Electrónico</div>
                 <div class="credential-value">${user.email}</div>
               </div>
-              
-              <div class="credential-item">
-                <div class="credential-label">Contraseña</div>
-                <div class="credential-value">${user.password}</div>
-              </div>
             </div>
 
             <p style="text-align: center; margin-bottom: 20px;">
@@ -216,7 +211,7 @@ const sendWelcomeEmail = async (user) => {
 
             <div class="info-text">
               <strong>💡 Consejo de Seguridad:</strong><br>
-              Nunca compartas tus credenciales con nadie. Guarda este correo en un lugar seguro.
+              Nunca compartas tus credenciales con nadie. Si olvidas tu contraseña, usa la opción de recuperación.
             </div>
           </div>
 

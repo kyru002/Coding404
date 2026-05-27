@@ -5,6 +5,14 @@ const User = require('../models/User');
 
 dotenv.config({ path: '.env.local' });
 
+const getRequiredEnv = (name) => {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    throw new Error(`Falta ${name} en .env.local`);
+  }
+  return value;
+};
+
 const fixAllUsers = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -13,7 +21,7 @@ const fixAllUsers = async () => {
     const allUsers = await User.find({});
     console.log(`📋 Total de usuarios: ${allUsers.length}\n`);
 
-    const testPassword = 'Test@1234';
+    const testPassword = getRequiredEnv('SEED_DEFAULT_PASSWORD');
     let fixed = 0;
     let ok = 0;
 
@@ -33,7 +41,7 @@ const fixAllUsers = async () => {
     console.log(`\n✅ Resumen:`);
     console.log(`  - Usuarios reparados: ${fixed}`);
     console.log(`  - Usuarios con contraseña: ${ok}`);
-    console.log(`  - Contraseña asignada: Test@1234`);
+    console.log(`  - Contraseña asignada: (definida por SEED_DEFAULT_PASSWORD)`);
 
     process.exit(0);
   } catch (error) {
