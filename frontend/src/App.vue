@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onBeforeUnmount, defineAsyncComponent } from 'vue'
+import { ref, onBeforeUnmount, onMounted, defineAsyncComponent } from 'vue'
 import Login from './components/Login.vue'
 import Register from './components/Register.vue'
 import Carga from './components/Carga.vue'
@@ -81,14 +81,20 @@ const showRegister = () => {
   currentView.value = 'register'
 }
 
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 7 días en ms
+
 const showHome = (user = null) => {
   if (user) {
     currentUser.value = user
     refreshPendingRequestsCount(user)
     startBattleInvitePolling(user)
-    // Guardar sesión para persistencia tras recargar
+    // Guardar sesión con timestamp de expiración (7 días)
     try {
-      localStorage.setItem('currentUser', JSON.stringify(user))
+      const sessionData = {
+        user,
+        loginTimestamp: Date.now()
+      }
+      localStorage.setItem('coding404_session', JSON.stringify(sessionData))
     } catch (error) {
       console.error('Error saving session:', error)
     }
@@ -270,32 +276,56 @@ const handleLogout = () => {
   activeBattleLaunch.value = null
   lastLaunchedBattleMatchId.value = ''
   currentView.value = 'login'
-  localStorage.removeItem('currentUser')
+  // Limpiar sesión persistente
+  localStorage.removeItem('coding404_session')
+  localStorage.removeItem('currentUser') // compatibilidad con sesiones antiguas
 }
 
 const restoreSessionFromStorage = () => {
   try {
-    const stored = localStorage.getItem('currentUser')
-    if (stored) {
-      const user = JSON.parse(stored)
+    // Intentar con el nuevo formato con timestamp
+    const storedSession = localStorage.getItem('coding404_session')
+    if (storedSession) {
+      const { user, loginTimestamp } = JSON.parse(storedSession)
+      const age = Date.now() - (loginTimestamp || 0)
+      if (user?.userId && age < SESSION_DURATION_MS) {
+        // Sesión válida: restaurar sin reiniciar el timestamp
+        currentUser.value = user
+        refreshPendingRequestsCount(user)
+        startBattleInvitePolling(user)
+        if (user?.isAdmin) activeSection.value = 'comunidad'
+        currentView.value = 'home'
+        return true
+      } else {
+        // Sesión expirada (más de 7 días)
+        localStorage.removeItem('coding404_session')
+      }
+    }
+
+    // Compatibilidad con sesiones antiguas sin timestamp
+    const legacyStored = localStorage.getItem('currentUser')
+    if (legacyStored) {
+      const user = JSON.parse(legacyStored)
+      localStorage.removeItem('currentUser') // migrar formato antiguo
       if (user?.userId) {
-        showHome(user)
+        showHome(user) // se guardará con el nuevo formato
         return true
       }
     }
   } catch (error) {
     console.error('Error restoring session:', error)
+    localStorage.removeItem('coding404_session')
     localStorage.removeItem('currentUser')
   }
   return false
 }
 
-const onBeforeMount = () => {
+onMounted(() => {
   refreshUiLanguage()
   if (!restoreSessionFromStorage()) {
     currentView.value = 'login'
   }
-}
+})
 
 
 

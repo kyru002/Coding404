@@ -1010,9 +1010,7 @@ export default {
         this.socket.disconnect()
         this.socket = null
       }
-    }
-  },
-  methods: {
+    },
     t(key) {
       const dict = {
         es: {

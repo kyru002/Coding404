@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+require('dotenv').config({ path: '.env.local' });
 
 const uri = process.env.MONGODB_URI || 'mongodb+srv://Admin:admin123@coding404.dzsh0ed.mongodb.net/Coding404?retryWrites=true&w=majority';
 
