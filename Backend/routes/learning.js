@@ -610,6 +610,85 @@ router.put('/progress/:userId/:language', async (req, res) => {
   }
 });
 
+// Alias POST para sendBeacon (que solo soporta POST, no PUT)
+router.post('/progress/:userId/:language', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const language = normalizeLanguage(req.params.language);
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'ID de usuario inválido.' });
+    }
+
+    if (!isSupportedLanguage(language)) {
+      return res.status(400).json({ message: `Lenguaje inválido para progreso: ${language}` });
+    }
+
+    const userExists = await User.exists({ _id: userId });
+    if (!userExists) {
+      return res.status(404).json({ message: 'Usuario no encontrado.' });
+    }
+
+    const completedLevels = sanitizeLevels(req.body?.completedLevels, LEVELS_PER_LANGUAGE);
+    const totalPoints = completedLevels.length * POINTS_PER_LEVEL;
+    const completionPercentage = Math.min(100, Math.round((completedLevels.length / LEVELS_PER_LANGUAGE) * 100));
+    const completedAt = completedLevels.length >= LEVELS_PER_LANGUAGE ? new Date() : null;
+
+    const progress = await UserLanguageProgress.findOneAndUpdate(
+      { userId, language },
+      {
+        userId,
+        language,
+        completedLevels,
+        completionPercentage,
+        totalPoints,
+        completedAt,
+        lastActivityAt: new Date(),
+      },
+      {
+        upsert: true,
+        returnDocument: 'after',
+        setDefaultsOnInsert: true,
+      }
+    );
+
+    const [pointsSummary] = await UserLanguageProgress.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      { $group: { _id: null, totalUserPoints: { $sum: { $ifNull: ['$totalPoints', 0] } } } },
+    ]);
+    const totalUserPoints = Number(pointsSummary?.totalUserPoints || 0);
+
+    await ensureLeaguesSeeded();
+    const leagueInfo = getLeague(totalUserPoints);
+    const leagueRecord = await League.findOne({ name: leagueInfo.name }, { _id: 1 }).lean();
+
+    if (leagueRecord?._id) {
+      await UserLeague.findOneAndUpdate(
+        { userId },
+        {
+          userId,
+          leagueId: leagueRecord._id,
+          totalPoints: totalUserPoints,
+          updatedAtLeague: new Date(),
+        },
+        {
+          upsert: true,
+          returnDocument: 'after',
+          setDefaultsOnInsert: true,
+        }
+      );
+    }
+
+    return res.json({
+      message: 'Progreso actualizado.',
+      progress,
+      totalUserPoints,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'No se pudo guardar el progreso.' });
+  }
+});
+
 router.get('/leaderboard', async (req, res) => {
   try {
     const { userId, scope = 'global' } = req.query;

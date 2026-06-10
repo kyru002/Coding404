@@ -281,6 +281,46 @@ const handleLogout = () => {
   localStorage.removeItem('currentUser') // compatibilidad con sesiones antiguas
 }
 
+const refreshUserFromServer = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/user/${userId}`)
+    if (response.ok) {
+      const data = await response.json()
+      if (data.user) {
+        // Merge server data with existing session to preserve isAdmin/role fields
+        const serverUser = {
+          userId: data.user._id || userId,
+          username: data.user.username,
+          programmerType: data.user.programmerType,
+          learningPath: data.user.learningPath || {},
+          role: data.user.role || 'user',
+          isAdmin: (data.user.role || 'user') === 'admin',
+          fullName: data.user.fullName,
+          email: data.user.email,
+          bio: data.user.bio,
+          phone: data.user.phone,
+          avatarUrl: data.user.avatarUrl,
+          github: data.user.github
+        }
+        currentUser.value = serverUser
+        // Actualizar sesión guardada con datos frescos
+        try {
+          const storedSession = localStorage.getItem('coding404_session')
+          if (storedSession) {
+            const { loginTimestamp } = JSON.parse(storedSession)
+            localStorage.setItem('coding404_session', JSON.stringify({
+              user: serverUser,
+              loginTimestamp: loginTimestamp || Date.now()
+            }))
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (error) {
+    console.warn('No se pudo refrescar usuario desde servidor al restaurar sesión:', error)
+  }
+}
+
 const restoreSessionFromStorage = () => {
   try {
     // Intentar con el nuevo formato con timestamp
@@ -295,6 +335,8 @@ const restoreSessionFromStorage = () => {
         startBattleInvitePolling(user)
         if (user?.isAdmin) activeSection.value = 'comunidad'
         currentView.value = 'home'
+        // Refrescar datos del usuario desde el servidor en segundo plano
+        refreshUserFromServer(user.userId)
         return true
       } else {
         // Sesión expirada (más de 7 días)

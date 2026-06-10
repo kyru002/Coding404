@@ -465,7 +465,17 @@ Ganador: Coche Rayo con 55 de distancia</pre>
                     >
                     <div v-else class="comment-avatar comment-avatar-default">👤</div>
                     <div class="comment-content">
-                      <p class="comment-author">{{ comment.fullName || comment.username }}</p>
+                      <div class="comment-header-row">
+                        <p class="comment-author">{{ comment.fullName || comment.username }}</p>
+                        <button
+                          v-if="isAdminMode"
+                          class="comment-delete-btn"
+                          @click="deleteCommentAsAdmin(post, comment)"
+                          title="Eliminar comentario"
+                        >
+                          ✕
+                        </button>
+                      </div>
                       <p class="comment-text">{{ comment.text }}</p>
                     </div>
                   </div>
@@ -3132,6 +3142,34 @@ export default {
 
       this.moderationBusyPostIds = this.moderationBusyPostIds.filter((id) => id !== postId)
     },
+    async deleteCommentAsAdmin(post, comment) {
+      const adminUserId = this.ensureLoggedUser()
+      if (!this.isAdminMode || !adminUserId || !post?.id || !comment?.id) return
+
+      const confirmed = window.confirm(this.uiLanguage === 'en' ? 'Are you sure you want to delete this comment?' : '¿Estás seguro de que quieres eliminar este comentario?')
+      if (!confirmed) return
+
+      try {
+        const response = await fetch(`${this.socialApiBaseUrl}/community/posts/${post.id}/comments/${comment.id}?adminUserId=${encodeURIComponent(adminUserId)}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          window.alert(data?.message || 'No se pudo eliminar el comentario.')
+          return
+        }
+
+        // Actualizar comentarios locales
+        post.comments = post.comments.filter((item) => item.id !== comment.id)
+        post.commentsCount = post.comments.length
+      } catch (error) {
+        window.alert('Error de conexión durante la moderación.')
+      }
+    },
     async deletePostAsAdmin(post) {
       const adminUserId = this.ensureLoggedUser()
       if (!this.isAdminMode || !adminUserId || !post?.id) return
@@ -5209,6 +5247,32 @@ export default {
 
 .comment-content {
   min-width: 0;
+  flex: 1;
+}
+
+.comment-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-delete-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 77, 79, 0.85);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.comment-delete-btn:hover {
+  background: rgba(255, 77, 79, 0.15);
+  color: #ff4d4f;
+  transform: scale(1.1);
 }
 
 .comment-author {

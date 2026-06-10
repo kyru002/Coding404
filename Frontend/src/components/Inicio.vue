@@ -1161,10 +1161,20 @@ export default {
         }
 
         const oldUserId = oldUser?.userId || oldUser?._id
-        const programmerTypeChanged = Boolean(oldUser && newUser.programmerType !== oldUser.programmerType)
+        // Solo re-inicializar lenguaje si realmente cambió el usuario (login distinto)
+        // NO re-inicializar si es el mismo usuario siendo refrescado desde el servidor
+        const isNewUser = userChanged && !oldUserId
+        const programmerTypeChanged = Boolean(
+          oldUser &&
+          newUser.programmerType !== oldUser.programmerType &&
+          // Solo si es realmente un cambio de usuario, no un refresco del mismo
+          userChanged
+        )
 
         if (userChanged || programmerTypeChanged) {
-          this.initializeLanguageFromProgrammerType()
+          if (isNewUser || programmerTypeChanged) {
+            this.initializeLanguageFromProgrammerType()
+          }
           await this.loadLanguage(this.currentLanguage)
           await this.loadProgress()
           await this.loadStreak()
@@ -2748,7 +2758,32 @@ export default {
     await this.loadLanguage(this.currentLanguage)
     await this.loadProgress()
     await this.loadStreak()
+
+    // Guardar progreso cuando el usuario cierra o recarga la página
+    this._beforeUnloadHandler = () => {
+      const userId = this.getActiveUserId()
+      if (!userId || !this.completedLevels.length) return
+      const backendLanguage = this.getBackendLanguage()
+      const url = `${this.apiBaseUrl}/progress/${userId}/${encodeURIComponent(backendLanguage)}`
+      const payload = JSON.stringify({
+        completedLevels: this.completedLevels,
+        totalPoints: this.totalPoints
+      })
+      // Usar sendBeacon para garantizar que el request llega aunque la página se cierre
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' })
+        navigator.sendBeacon(url, blob)
+      }
+    }
+    window.addEventListener('beforeunload', this._beforeUnloadHandler)
   },
+
+  beforeUnmount() {
+    if (this._beforeUnloadHandler) {
+      window.removeEventListener('beforeunload', this._beforeUnloadHandler)
+      this._beforeUnloadHandler = null
+    }
+  }
 
 }
 </script>

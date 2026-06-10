@@ -10,6 +10,8 @@ const Notification = require('../models/Notification');
 const Follow = require('../models/Follow');
 const BattleRequest = require('../models/BattleRequest');
 const BattleMatch = require('../models/BattleMatch');
+const League = require('../models/League');
+const UserLeague = require('../models/UserLeague');
 
 let io = null;
 
@@ -443,6 +445,107 @@ const ensureAdminUserSeeded = async () => {
   );
 };
 
+const ensureDemoUserFullyUnlocked = async () => {
+  try {
+    const DEMO_USERNAME = 'demo';
+    const ALL_LANGUAGES = ['Python', 'JavaScript', 'HTML', 'CSS', 'Java', 'SQL', 'Vue', 'PHP', 'Node.js'];
+    const ALL_LESSON_IDS = [
+      'python',
+      'frontend-html',
+      'frontend-css',
+      'frontend-js',
+      'frontend-layout',
+      'backend-java',
+      'backend-poo',
+      'backend-api',
+      'database-mysql',
+      'database-python',
+      'fullstack-html',
+      'fullstack-css',
+      'fullstack-js',
+      'fullstack-vue',
+      'fullstack-java',
+      'fullstack-api',
+      'fullstack-mysql',
+    ];
+    const ALL_COURSE_IDS = ['python', 'frontend', 'backend', 'database', 'fullstack'];
+    const LEVELS_PER_LANGUAGE = 30;
+    const POINTS_PER_LEVEL = 2;
+
+    let user = await User.findOne({ username: DEMO_USERNAME });
+    const passwordHash = await bcrypt.hash('demo123', 10);
+    
+    if (!user) {
+      user = await User.create({
+        fullName: 'Demo User',
+        email: 'demo@coding404.dev',
+        username: DEMO_USERNAME,
+        passwordHash,
+        programmerType: 'Full-Stack',
+        role: 'user',
+        isBanned: false,
+        github: { hasAccount: false, username: '' },
+        bio: 'Usuario de demostración con acceso completo',
+        avatarUrl: '',
+        phone: '',
+      });
+      console.log('  ✅ Usuario Demo creado en BD para autoseed');
+    }
+
+    const userId = String(user._id);
+    const allCompletedLevels = Array.from({ length: LEVELS_PER_LANGUAGE }, (_, i) => i + 1);
+    const pointsPerLanguage = LEVELS_PER_LANGUAGE * POINTS_PER_LEVEL;
+
+    for (const language of ALL_LANGUAGES) {
+      await UserLanguageProgress.findOneAndUpdate(
+        { userId, language },
+        {
+          userId,
+          language,
+          completedLevels: allCompletedLevels,
+          completionPercentage: 100,
+          totalPoints: pointsPerLanguage,
+          completedAt: new Date(),
+          lastActivityAt: new Date(),
+        },
+        {
+          upsert: true,
+          returnDocument: 'after',
+          setDefaultsOnInsert: true,
+        }
+      );
+    }
+
+    const totalUserPoints = pointsPerLanguage * ALL_LANGUAGES.length;
+    const leagueRecord = await League.findOne({ name: 'Legendary Lead' });
+    if (leagueRecord) {
+      await UserLeague.findOneAndUpdate(
+        { userId },
+        {
+          userId,
+          leagueId: leagueRecord._id,
+          totalPoints: totalUserPoints,
+          updatedAtLeague: new Date(),
+        },
+        { upsert: true }
+      );
+    }
+
+    user.learningPath = {
+      preferredTrack: 'Full-Stack',
+      recommendedCourse: 'fullstack',
+      activeCourse: 'fullstack',
+      startedCourses: ALL_COURSE_IDS,
+      startedLessons: ALL_LESSON_IDS,
+      completedLessons: ALL_LESSON_IDS,
+    };
+    await user.save();
+    console.log('  ✅ Usuario Demo completamente desbloqueado y sincronizado en autoseed');
+  } catch (err) {
+    console.error('  ❌ Error al asegurar usuario Demo en autoseed:', err.message);
+  }
+};
+
 const ensureDemoUsersSeeded = async () => {
   await ensureAdminUserSeeded();
 
@@ -861,6 +964,7 @@ const ensureDemoUsersSeeded = async () => {
     });
   }
 
+  await ensureDemoUserFullyUnlocked();
 };
 
 router.post('/activity/:userId', async (req, res) => {
@@ -1695,6 +1799,64 @@ router.delete('/community/posts/:postId', async (req, res) => {
     return res.json({ message: 'Publicacion eliminada.' });
   } catch (error) {
     return res.status(500).json({ message: 'No se pudo eliminar la publicacion.' });
+  }
+});
+
+router.delete('/community/posts/:postId/comments/:commentId', async (req, res) => {
+  try {
+    const { postId, commentId } = req.params;
+    const userId = req.body?.userId || req.query?.userId;
+    const adminUserId = req.body?.adminUserId || req.query?.adminUserId;
+
+    if (!mongoose.Types.ObjectId.isValid(postId) || !mongoose.Types.ObjectId.isValid(commentId)) {
+      return res.status(400).json({ message: 'Datos invalidos.' });
+    }
+
+    if (mongoose.Types.ObjectId.isValid(adminUserId)) {
+      const adminUser = await User.findById(adminUserId, { role: 1, isBanned: 1, bannedReason: 1 }).lean();
+      if (!adminUser || !isAdminUser(adminUser)) {
+        return res.status(403).json({ message: 'Solo un administrador puede eliminar comentarios.' });
+      }
+      if (adminUser.isBanned) {
+        return res.status(403).json({ message: buildBannedMessage(adminUser) });
+      }
+
+      const post = await CommunityPost.findByIdAndUpdate(
+        postId,
+        { $pull: { comments: { _id: commentId } } },
+        { returnDocument: 'after' }
+      );
+
+      if (!post) {
+        return res.status(404).json({ message: 'Publicacion no encontrada.' });
+      }
+
+      return res.json({ message: 'Comentario eliminado por moderación.' });
+    }
+
+    const actor = await ensureActiveActor(userId, res, { allowAdmin: false });
+    if (!actor) return;
+
+    const post = await CommunityPost.findById(postId);
+    if (!post) {
+      return res.status(404).json({ message: 'Publicacion no encontrada.' });
+    }
+
+    const comment = post.comments.id(commentId);
+    if (!comment) {
+      return res.status(404).json({ message: 'Comentario no encontrado.' });
+    }
+
+    if (String(comment.userId) !== String(userId)) {
+      return res.status(403).json({ message: 'Solo puedes eliminar tus propios comentarios.' });
+    }
+
+    post.comments.pull({ _id: commentId });
+    await post.save();
+
+    return res.json({ message: 'Comentario eliminado.' });
+  } catch (error) {
+    return res.status(500).json({ message: 'No se pudo eliminar el comentario.' });
   }
 });
 
